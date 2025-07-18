@@ -1,3 +1,4 @@
+import { Link } from "lucide-react";
 import Image from "next/image";
 
 export function Header() {
@@ -7,7 +8,7 @@ export function Header() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="p-3 rounded-2xl bg-primary cursor-pointer">
-              <a href="/">
+              <Link href="/">
                 <Image
                   src="/icons/tooth.png"
                   alt="logo"
@@ -15,7 +16,7 @@ export function Header() {
                   height={25}
                   priority
                 />
-              </a>
+              </Link>
             </div>
             {/* <h1 className="text-xl">Natural Smile Dental Clinic</h1> */}
           </div>

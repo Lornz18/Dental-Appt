@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Appointment from '@/app/models/appointment-model'; // Mongoose model
 import mongoose from 'mongoose';
 
@@ -61,13 +61,15 @@ export async function PATCH(request: Request) {
     }
 }
 
-// DELETE: Delete an appointment by ID
-export async function DELETE(request: Request) {
+// Correctly typed DELETE method for dynamic route [id]
+export async function DELETE(
+    request: NextRequest,
+    context: { params: { id: string } }  // ✅ CORRECT TYPE
+) {
     try {
         await connectToDB();
 
-        const body = await request.json();
-        const { id } = body;
+        const { id } = context.params;
 
         if (!id) {
             return NextResponse.json({ success: false, error: 'Appointment ID is required' }, { status: 400 });

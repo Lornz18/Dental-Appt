@@ -6,7 +6,6 @@ import {
   Trash2,
   RefreshCw,
   Calendar,
-  Mail,
   User,
   Clock,
   Filter,
@@ -60,9 +59,11 @@ export default function AdminDashboardPage() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setAppointments(data.appointments || []);
-    } catch (err: any) {
-      setError(err.message);
-      setAppointments([]);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+        setAppointments([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -92,8 +93,12 @@ export default function AdminDashboardPage() {
         prev.map((a) => (a._id === id ? { ...a, status: newStatus } : a))
       );
       toast.success("Status updated successfully!", { id: toastId });
-    } catch (err: any) {
-      toast.error(`Error: ${err.message}`, { id: toastId });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error(`Error: ${err.message}`, { id: toastId });
+      } else {
+        toast.error(`Error: ${err}`, { id: toastId });
+      }
     }
   };
 
@@ -107,8 +112,12 @@ export default function AdminDashboardPage() {
 
       setAppointments((prev) => prev.filter((a) => a._id !== id));
       toast.success("Appointment deleted successfully!", { id: toastId });
-    } catch (err: any) {
-      toast.error(`Delete error: ${err.message}`, { id: toastId });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error(`Delete error: ${err.message}`, { id: toastId });
+      } else {
+        toast.error(`Delete error: ${err}`, { id: toastId });
+      }
     }
   };
 
@@ -165,15 +174,14 @@ export default function AdminDashboardPage() {
   );
 
   // --- NEW: Filter for Today's and Tomorrow's Appointments ---
-  const todayAppointments = sortedAppointments.filter(
-    (app) => isToday(parseISO(app.appointmentDate))
+  const todayAppointments = sortedAppointments.filter((app) =>
+    isToday(parseISO(app.appointmentDate))
   );
 
-  const tomorrowAppointments = sortedAppointments.filter(
-    (app) => isTomorrow(parseISO(app.appointmentDate))
+  const tomorrowAppointments = sortedAppointments.filter((app) =>
+    isTomorrow(parseISO(app.appointmentDate))
   );
   // --- END NEW ---
-
 
   const getStats = () => {
     const total = appointments.length;
@@ -299,7 +307,8 @@ export default function AdminDashboardPage() {
           )}
 
           {/* --- NEW SECTION: Today's & Tomorrow's Appointments --- */}
-          {(todayAppointments.length > 0 || tomorrowAppointments.length > 0) && (
+          {(todayAppointments.length > 0 ||
+            tomorrowAppointments.length > 0) && (
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
               <h2 className="text-xl font-bold text-white mb-4">
                 Upcoming Appointments
@@ -327,9 +336,7 @@ export default function AdminDashboardPage() {
                               {app.appointmentTime}
                             </p>
                           </div>
-                          <div>
-                            {app.reason}
-                          </div>
+                          <div>{app.reason}</div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <span
@@ -482,9 +489,6 @@ export default function AdminDashboardPage() {
               </button>
             </div>
           </div>
-
-          
-
 
           {/* Appointments Table */}
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden">
@@ -641,16 +645,16 @@ export default function AdminDashboardPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => handleDelete(app._id)}
-                              className="p-2 rounded-lg transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
-                              aria-label="Delete appointment"
-                              style={{
-                                backgroundColor: "rgba(239, 68, 68, 0.15)",
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                          <button
+                            onClick={() => handleDelete(app._id)}
+                            className="p-2 rounded-lg transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
+                            aria-label="Delete appointment"
+                            style={{
+                              backgroundColor: "rgba(239, 68, 68, 0.15)",
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))

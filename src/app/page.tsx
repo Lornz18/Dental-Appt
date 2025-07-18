@@ -266,8 +266,8 @@ export default function Home() {
               Lead Dentist
             </p>
             <p className="text-foreground/70 text-sm">
-              "Dedicated to creating healthy, beautiful smiles with a gentle
-              approach."
+              &apos;Dedicated to creating healthy, beautiful smiles with a gentle
+              approach.&apos;
             </p>
             <button className="mt-4 px-4 py-2 border-2 border-secondary text-secondary hover:bg-secondary hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               Learn More
@@ -291,7 +291,7 @@ export default function Home() {
               Dental Hygienist
             </p>
             <p className="text-foreground/70 text-sm">
-              "Passionate about preventative care and patient education."
+              &apos;Passionate about preventative care and patient education.&apos;
             </p>
             <button className="mt-4 px-4 py-2 border-2 border-secondary text-secondary hover:bg-secondary hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               Learn More
@@ -315,7 +315,7 @@ export default function Home() {
               Orthodontist
             </p>
             <p className="text-foreground/70 text-sm">
-              "Crafting perfect smiles with personalized orthodontic solutions."
+              &apos;Crafting perfect smiles with personalized orthodontic solutions.&apos;
             </p>
             <button className="mt-4 px-4 py-2 border-2 border-secondary text-secondary hover:bg-secondary hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               Learn More
@@ -340,7 +340,7 @@ export default function Home() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-xl font-semibold text-foreground">
-                  "Absolutely fantastic experience!"
+                  &apos;Absolutely fantastic experience!&apos;
                 </p>
                 <p className="text-foreground/80">
                   The staff were incredibly friendly and made me feel very
@@ -357,8 +357,8 @@ export default function Home() {
               </svg>
             </div>
             <p className="text-foreground/70 mb-3">
-              "The clinic is modern, clean, and the staff is very professional
-              and caring. Dr. Carter explained everything clearly."
+              &apos;The clinic is modern, clean, and the staff is very professional
+              and caring. Dr. Carter explained everything clearly.&apos;
             </p>
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-primary/30">
@@ -381,7 +381,7 @@ export default function Home() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-xl font-semibold text-foreground">
-                  "Highly recommend this practice!"
+                  &apos;Highly recommend this practice!&apos;
                 </p>
                 <p className="text-foreground/80">
                   My daughter felt so at ease during her first visit.
@@ -397,9 +397,9 @@ export default function Home() {
               </svg>
             </div>
             <p className="text-foreground/70 mb-3">
-              "We recently switched to this clinic and are so pleased with the
+              &apos;We recently switched to this clinic and are so pleased with the
               quality of care and the welcoming atmosphere. The hygienist was
-              very gentle."
+              very gentle.&apos;
             </p>
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-secondary/30">
@@ -426,7 +426,7 @@ export default function Home() {
           Ready for a Healthier Smile?
         </h2>
         <p className="text-lg text-foreground/70 mb-10 max-w-2xl mx-auto animate-fadeIn animation-delay-200">
-          Don't wait to achieve the smile you deserve. Schedule your
+          Don&apos;t wait to achieve the smile you deserve. Schedule your
           consultation today.
         </p>
         <div className="animate-fadeIn animation-delay-400">

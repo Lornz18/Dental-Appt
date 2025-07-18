@@ -167,9 +167,11 @@ export default function Appointment() {
       const res = await fetch("/api/appointment", { method: "GET" });
       const data = await res.json();
       setAvailability(data.appointments || []);
-    } catch (error: any) {
-      console.error("Error submitting appointment:", error);
-      alert(`Failed to book appointment: ${error.message}`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error submitting appointment:", error);
+        alert(`Failed to book appointment: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -181,7 +183,15 @@ export default function Appointment() {
     .map((a) => a.appointmentDate.slice(0, 10)); // Get YYYY-MM-DD
 
   // Custom styling for calendar tiles
-  const tileClassName = ({ date, view }: any) => {
+  const tileClassName = ({
+    date,
+    view,
+  }: {
+    date: Date;
+    view: string;
+  }): string | null => {
+    // The 'format' function expects a Date object
+    // The 'view' is checked against a string literal "month"
     if (view === "month") {
       const formattedDate = format(date, "yyyy-MM-dd");
       // Mark dates that have at least one booked appointment
