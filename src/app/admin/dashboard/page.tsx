@@ -107,7 +107,10 @@ export default function AdminDashboardPage() {
 
     const toastId = toast.loading("Deleting appointment...");
     try {
-      const res = await fetch(`/api/appointment/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/appointment/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
       if (!res.ok) throw new Error("Delete failed");
 
       setAppointments((prev) => prev.filter((a) => a._id !== id));
