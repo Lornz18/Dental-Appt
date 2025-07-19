@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format, parseISO, isToday, isTomorrow } from "date-fns";
+import {
+  format,
+  parseISO,
+  isToday,
+  isTomorrow,
+  isValid,
+  parse,
+} from "date-fns";
 import {
   Trash2,
   RefreshCw,
@@ -11,10 +18,13 @@ import {
   Filter,
   LogOut,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
+// --- Types ---
 type Appointment = {
   _id: string;
   patientName: string;
@@ -25,17 +35,19 @@ type Appointment = {
   status: "pending" | "confirmed" | "completed" | "cancelled";
 };
 
+// --- Helper Functions ---
 const formatDateTime = (dateStr: string, timeStr: string): string => {
   try {
     if (!dateStr || !timeStr) return "Invalid Date/Time";
     const date = parseISO(dateStr);
-    if (isNaN(date.getTime())) return `${dateStr} ${timeStr}`;
+    if (isNaN(date.getTime())) return `${dateStr} ${timeStr}`; // Fallback for invalid ISO
     return `${format(date, "MMM d, yyyy")} at ${timeStr}`;
   } catch {
-    return `${dateStr} ${timeStr}`;
+    return `${dateStr} ${timeStr}`; // Fallback for any parsing errors
   }
 };
 
+// --- Component ---
 export default function AdminDashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +56,7 @@ export default function AdminDashboardPage() {
 
   const router = useRouter();
 
+  // --- Authentication Check ---
   useEffect(() => {
     const isAdmin = localStorage.getItem("isAdmin");
     if (isAdmin !== "true") {
@@ -51,34 +64,45 @@ export default function AdminDashboardPage() {
     }
   }, [router]);
 
+  // --- Fetch Appointments ---
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/appointment");
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(
+          errorData.message ||
+            `Failed to fetch appointments (Status: ${res.status})`
+        );
+      }
       const data = await res.json();
       setAppointments(data.appointments || []);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
-        setAppointments([]);
+      } else {
+        setError("An unknown error occurred while fetching appointments.");
       }
+      setAppointments([]); // Clear appointments on error
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Fetch initial data when the component mounts
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
 
+  // --- Appointment Handlers ---
   const handleStatusUpdate = async (
     id: string,
     newStatus: Appointment["status"]
   ) => {
-    if (loading || appointments.find((a) => a._id === id)?.status === newStatus)
-      return;
+    const currentAppointment = appointments.find((a) => a._id === id);
+    if (!currentAppointment || currentAppointment.status === newStatus) return;
 
     const toastId = toast.loading("Updating status...");
     try {
@@ -87,7 +111,10 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (!res.ok) throw new Error("Failed to update");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update status");
+      }
 
       setAppointments((prev) =>
         prev.map((a) => (a._id === id ? { ...a, status: newStatus } : a))
@@ -97,7 +124,7 @@ export default function AdminDashboardPage() {
       if (err instanceof Error) {
         toast.error(`Error: ${err.message}`, { id: toastId });
       } else {
-        toast.error(`Error: ${err}`, { id: toastId });
+        toast.error(`An unexpected error occurred`, { id: toastId });
       }
     }
   };
@@ -109,9 +136,11 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch(`/api/appointment/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) throw new Error("Delete failed");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Delete failed");
+      }
 
       setAppointments((prev) => prev.filter((a) => a._id !== id));
       toast.success("Appointment deleted successfully!", { id: toastId });
@@ -119,7 +148,9 @@ export default function AdminDashboardPage() {
       if (err instanceof Error) {
         toast.error(`Delete error: ${err.message}`, { id: toastId });
       } else {
-        toast.error(`Delete error: ${err}`, { id: toastId });
+        toast.error(`An unexpected error occurred during deletion`, {
+          id: toastId,
+        });
       }
     }
   };
@@ -130,6 +161,7 @@ export default function AdminDashboardPage() {
     router.push("/admin");
   };
 
+  // --- Utility Functions for Styling ---
   const getStatusClasses = (status: Appointment["status"]) => {
     switch (status) {
       case "confirmed":
@@ -160,13 +192,12 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Sort appointments by date to bring upcoming ones to the top
+  // --- Data Processing for Display ---
   const sortedAppointments = [...appointments].sort((a, b) => {
     const dateA = parseISO(a.appointmentDate);
     const dateB = parseISO(b.appointmentDate);
     if (dateA < dateB) return -1;
     if (dateA > dateB) return 1;
-    // If dates are the same, sort by time (optional, but good practice)
     if (a.appointmentTime < b.appointmentTime) return -1;
     if (a.appointmentTime > b.appointmentTime) return 1;
     return 0;
@@ -176,7 +207,6 @@ export default function AdminDashboardPage() {
     (a) => filterStatus === "all" || a.status === filterStatus
   );
 
-  // --- NEW: Filter for Today's and Tomorrow's Appointments ---
   const todayAppointments = sortedAppointments.filter((app) =>
     isToday(parseISO(app.appointmentDate))
   );
@@ -184,7 +214,6 @@ export default function AdminDashboardPage() {
   const tomorrowAppointments = sortedAppointments.filter((app) =>
     isTomorrow(parseISO(app.appointmentDate))
   );
-  // --- END NEW ---
 
   const getStats = () => {
     const total = appointments.length;
@@ -204,8 +233,9 @@ export default function AdminDashboardPage() {
 
   const stats = getStats();
 
+  // --- JSX Rendering ---
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-600 via-primary to-slate-400">
+    <div className="min-h-screen bg-gradient-to-br from-slate-600 via-primary to-slate-400 text-white">
       <div className="relative z-10 py-8 px-4 sm:px-6 lg:px-8 container">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -219,17 +249,24 @@ export default function AdminDashboardPage() {
                   Admin Dashboard
                 </h1>
                 <p className="text-slate-300">
-                  Manage appointments and patient data
+                  Manage appointments and clinic settings
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="cursor-pointer flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all duration-200 backdrop-blur-sm"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleLogout}
+                className="cursor-pointer flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all duration-200 backdrop-blur-sm"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+              <Link
+                href={"/admin/settings"}
+                className="cursor-pointer flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all duration-200 backdrop-blur-sm"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -237,7 +274,7 @@ export default function AdminDashboardPage() {
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-slate-300 text-sm">Total</p>
+                  <p className="text-slate-300 text-sm">Total Appointments</p>
                   <p className="text-2xl font-bold text-white">{stats.total}</p>
                 </div>
                 <div className="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center">
@@ -299,17 +336,16 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Error Display */}
+          {/* Error Display for Appointments */}
           {error && (
             <div className="bg-red-500/20 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl mb-6 backdrop-blur-sm">
               <div className="flex items-center">
-                <span className="mr-2">⚠️</span>
-                Error: {error}
+                <span className="mr-2">⚠️</span> Error: {error}
               </div>
             </div>
           )}
 
-          {/* --- NEW SECTION: Today's & Tomorrow's Appointments --- */}
+          {/* Upcoming Appointments Section (Admin View Only - Kept for context, but can be removed if strictly user-facing) */}
           {(todayAppointments.length > 0 ||
             tomorrowAppointments.length > 0) && (
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
@@ -339,7 +375,9 @@ export default function AdminDashboardPage() {
                               {app.appointmentTime}
                             </p>
                           </div>
-                          <div>{app.reason}</div>
+                          <div className="text-xs italic text-slate-300">
+                            {app.reason || ""}
+                          </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <span
@@ -410,32 +448,21 @@ export default function AdminDashboardPage() {
               )}
             </div>
           )}
-          {/* --- END NEW SECTION --- */}
 
-          {/* Controls */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          {/* Appointment Controls and Table */}
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden">
+            <div className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <Filter className="w-5 h-5 text-slate-300" />
                   <label className="text-slate-300 font-medium">Filter:</label>
                 </div>
                 <div className="relative">
-                  {" "}
-                  {/* Container for select and custom arrow */}
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="appearance-none py-2 pl-4 pr-8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm"
-                    style={{
-                      backgroundColor: "#ffffff", // Use your defined dark card background
-                      borderColor: "rgba(255, 255, 255, 0.2)", // Use your defined border color
-                      color: "#121212", // Use your defined foreground color for the select text
-                      borderWidth: "1px",
-                      borderStyle: "solid",
-                    }}
+                    className="appearance-none py-2 pl-4 pr-8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm bg-white/10 border border-white/20 text-white"
                   >
-                    {/* Options styled for readability */}
                     <option value="all" className="bg-gray-800 text-white">
                       All Appointments
                     </option>
@@ -461,11 +488,7 @@ export default function AdminDashboardPage() {
                       Cancelled
                     </option>
                   </select>
-                  {/* Custom dropdown arrow */}
-                  <div
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"
-                    style={{ color: "#121212" }}
-                  >
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-white/70">
                     <svg
                       className="w-4 h-4 fill-current"
                       xmlns="http://www.w3.org/2000/svg"
@@ -487,28 +510,24 @@ export default function AdminDashboardPage() {
               >
                 <RefreshCw
                   className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
-                />
+                />{" "}
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
-          </div>
 
-          {/* Appointments Table */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden">
+            {/* Appointments Table */}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-white/20">
                 <thead className="bg-white/5">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                       <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2" />
-                        Patient
+                        <User className="w-4 h-4 mr-2" /> Patient
                       </div>
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                       <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Date & Time
+                        <Calendar className="w-4 h-4 mr-2" /> Date & Time
                       </div>
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
@@ -579,15 +598,13 @@ export default function AdminDashboardPage() {
                           >
                             <span className="mr-1">
                               {getStatusIcon(app.status)}
-                            </span>
+                            </span>{" "}
                             {app.status}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-3">
                             <div className="relative">
-                              {" "}
-                              {/* Container for select and custom arrow */}
                               <select
                                 onChange={(e) =>
                                   handleStatusUpdate(
@@ -596,16 +613,8 @@ export default function AdminDashboardPage() {
                                   )
                                 }
                                 value={app.status}
-                                className="appearance-none py-1.5 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm"
-                                style={{
-                                  backgroundColor: "#ffffff", // Use your defined dark card background
-                                  borderColor: "rgba(255, 255, 255, 0.2)", // Use your defined border color
-                                  color: "#121212", // Use your defined foreground color for the select text
-                                  borderWidth: "1px",
-                                  borderStyle: "solid",
-                                }}
+                                className="appearance-none py-1.5 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm bg-white/10 border border-white/20 text-white"
                               >
-                                {/* Options styled for readability */}
                                 <option
                                   value="pending"
                                   className="bg-gray-800 text-white"
@@ -631,11 +640,7 @@ export default function AdminDashboardPage() {
                                   ❌ Cancelled
                                 </option>
                               </select>
-                              {/* Custom dropdown arrow */}
-                              <div
-                                className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"
-                                style={{ color: "#121212" }}
-                              >
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-white/70">
                                 <svg
                                   className="w-4 h-4 fill-current"
                                   xmlns="http://www.w3.org/2000/svg"
@@ -670,7 +675,7 @@ export default function AdminDashboardPage() {
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-sm text-slate-200">
-              Admin Dashboard - Manage appointments efficiently
+              Admin Dashboard - Manage appointments and clinic operations
             </p>
           </div>
         </div>

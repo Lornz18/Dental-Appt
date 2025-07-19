@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       {/* Keep inter.variable here as it's a CSS variable, can be applied server-side */}
-      <body className={`${inter.variable} antialiased`}>
+      <body className={`${inter.variable} antialiased relative`}>
         {/* Use the client wrapper component */}
         <LayoutClientWrapper>
           {children}

@@ -18,7 +18,10 @@ export default function Home() {
           </p>
           <div className="flex justify-center md:justify-start animate-fadeIn animation-delay-400">
             {/* Placeholder for your Appointment component or a button */}
-            <a href="/appointment" className="bg-primary hover:bg-secondary text-white hover:text-primary cursor-pointer font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
+            <a
+              href="/appointment"
+              className="bg-primary hover:bg-secondary text-white hover:text-primary cursor-pointer font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1"
+            >
               Book Your Appointment
             </a>
             {/* If you have a specific Appointment component:
@@ -29,14 +32,11 @@ export default function Home() {
         <div className="md:w-1/2 mt-8 md:mt-0 flex justify-center z-10">
           <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-xl">
             <Image
-              src="/banner.jpg" // Replace with your actual image path
+              src="/banner.jpg"
               alt="Smiling patient with dentist"
-              layout="fill"
-              objectFit="cover"
-              className="opacity-90" // Slightly dim image for text contrast
+              fill
+              className="object-cover opacity-90"
             />
-            {/* Optional overlay for better text contrast */}
-            <div className="absolute inset-0 bg-foreground/5"></div>
           </div>
         </div>
       </section>
@@ -266,8 +266,8 @@ export default function Home() {
               Lead Dentist
             </p>
             <p className="text-foreground/70 text-sm">
-              &apos;Dedicated to creating healthy, beautiful smiles with a gentle
-              approach.&apos;
+              &apos;Dedicated to creating healthy, beautiful smiles with a
+              gentle approach.&apos;
             </p>
             <button className="mt-4 px-4 py-2 border-2 border-secondary text-secondary hover:bg-secondary hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               Learn More
@@ -291,7 +291,8 @@ export default function Home() {
               Dental Hygienist
             </p>
             <p className="text-foreground/70 text-sm">
-              &apos;Passionate about preventative care and patient education.&apos;
+              &apos;Passionate about preventative care and patient
+              education.&apos;
             </p>
             <button className="mt-4 px-4 py-2 border-2 border-secondary text-secondary hover:bg-secondary hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               Learn More
@@ -315,7 +316,8 @@ export default function Home() {
               Orthodontist
             </p>
             <p className="text-foreground/70 text-sm">
-              &apos;Crafting perfect smiles with personalized orthodontic solutions.&apos;
+              &apos;Crafting perfect smiles with personalized orthodontic
+              solutions.&apos;
             </p>
             <button className="mt-4 px-4 py-2 border-2 border-secondary text-secondary hover:bg-secondary hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               Learn More
@@ -357,8 +359,9 @@ export default function Home() {
               </svg>
             </div>
             <p className="text-foreground/70 mb-3">
-              &apos;The clinic is modern, clean, and the staff is very professional
-              and caring. Dr. Carter explained everything clearly.&apos;
+              &apos;The clinic is modern, clean, and the staff is very
+              professional and caring. Dr. Carter explained everything
+              clearly.&apos;
             </p>
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-primary/30">
@@ -397,9 +400,9 @@ export default function Home() {
               </svg>
             </div>
             <p className="text-foreground/70 mb-3">
-              &apos;We recently switched to this clinic and are so pleased with the
-              quality of care and the welcoming atmosphere. The hygienist was
-              very gentle.&apos;
+              &apos;We recently switched to this clinic and are so pleased with
+              the quality of care and the welcoming atmosphere. The hygienist
+              was very gentle.&apos;
             </p>
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-secondary/30">
