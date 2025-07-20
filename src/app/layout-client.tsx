@@ -5,6 +5,7 @@ import React, { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/header/header"; // Ensure this path is correct
 import { Toaster } from 'react-hot-toast'; // Keep Toaster here or move to RootLayout if it's global
+import Footer from "@/components/footer/footer";
 
 // This component will render the Header conditionally
 const LayoutClientWrapper = ({ children }: { children: ReactNode }) => {
@@ -31,6 +32,7 @@ const LayoutClientWrapper = ({ children }: { children: ReactNode }) => {
       <Toaster position="top-right" reverseOrder={false} />
       {showHeader && <Header />}
       {children}
+      {showHeader && <Footer />}
     </>
   );
 };

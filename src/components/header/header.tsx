@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export function Header() {
   return (
-    <header className="p-4 text-black">
+    <header className="p-4 text-black dark:bg-gray-900 dark:text-white">
       <div className="container">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -32,7 +32,7 @@ export function Header() {
               </li>
               <li>
                 <a
-                  href="/about"
+                  href="/dentist"
                   className="hover:text-primary transition-all duration-300"
                 >
                   Dentist
