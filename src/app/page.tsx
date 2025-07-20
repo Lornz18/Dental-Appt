@@ -311,6 +311,7 @@ export default function Home() {
                     comfortable.
                   </p>
                 </div>
+                
                 <MessageSquare className="text-primary"></MessageSquare>
               </div>
               <p className="text-foreground/70 dark:text-gray-300 mb-3">
