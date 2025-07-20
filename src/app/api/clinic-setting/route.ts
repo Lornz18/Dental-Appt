@@ -38,7 +38,7 @@ async function ensureDbConnection() {
 // --- API Handlers ---
 
 // GET: Fetch Clinic Settings
-export async function GET(request: Request) {
+export async function GET() {
   const dbCheckResult = await ensureDbConnection();
   if (dbCheckResult instanceof NextResponse) {
     return dbCheckResult; // Return the error response if connection failed
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     // In a real app, you'd likely fetch based on a specific ID or identifier
     // For simplicity, we'll assume there's only one clinic settings document
     // You might need to find it first if it's not guaranteed to exist.
-    let settings = await ClinicSetting.findOne();
+    const settings = await ClinicSetting.findOne();
 
     if (!settings) {
       // If no settings exist yet, you could either:
@@ -144,20 +144,10 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("POST /api/clinic-settings Error:", error);
     // Handle specific validation errors or general errors
-    let errorMessage = (error as Error).message;
-    if (error.name === "ValidationError") {
-      // Mongoose validation error
-      errorMessage = Object.values((error as any).errors)
-        .map((err: any) => err.message)
-        .join(", ");
-      return NextResponse.json(
-        { success: false, message: `Validation Error: ${errorMessage}` },
-        { status: 400 }
-      );
-    }
+    const errorMessage = (error as Error).message;
     return NextResponse.json(
       { success: false, message: `An error occurred: ${errorMessage}` },
       { status: 500 }

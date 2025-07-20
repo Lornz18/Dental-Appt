@@ -4,22 +4,14 @@ import React, {
   useState,
   useEffect,
   useCallback,
-  FormEvent,
   useRef,
 } from "react";
 import {
   format,
-  parseISO,
-  isToday,
-  isTomorrow,
-  isValid,
-  parse,
 } from "date-fns";
 import {
   Trash2,
   RefreshCw,
-  Calendar,
-  Clock,
   LogOut,
   BarChart3,
   Sun, // For general opening hours
@@ -38,16 +30,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ModalPortal from "@/components/modal/modal-portal"; // Adjust import path as needed
 
-// --- Types (remain the same) ---
-type Appointment = {
-  _id: string;
-  patientName: string;
-  email: string;
-  appointmentDate: string;
-  appointmentTime: string;
-  reason?: string;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
-};
 type TimeSlot = { startTime: string; endTime: string };
 type CustomHours = { date: string; hours: TimeSlot | null };
 type RecurringClosure = {
@@ -75,8 +57,6 @@ type Service = {
 
 // --- Component ---
 export default function AdminSettingPage() {
-  // --- General State ---
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   // State for Active Tab
@@ -660,7 +640,7 @@ export default function AdminSettingPage() {
         {/* Saturday Hours */}
         <div className="bg-white/5 p-4 rounded-lg border border-white/15">
           <h3 className="text-lg font-semibold text-slate-300 mb-3 flex items-center">
-            <Moon className="w-5 h-5 mr-2 text-indigo-400" /> Saturday Hours
+            <Moon className="w-5 h-5 mr-2 text-indigo-200" /> Saturday Hours
           </h3>
           <div className="flex items-center justify-between">
             {clinicSettings.saturdayHours ? (
@@ -717,7 +697,7 @@ export default function AdminSettingPage() {
         {/* Sunday Hours */}
         <div className="bg-white/5 p-4 rounded-lg border border-white/15">
           <h3 className="text-lg font-semibold text-slate-300 mb-3 flex items-center">
-            <Sun className="w-5 h-5 mr-2 text-orange-400" /> Sunday Hours
+            <Sun className="w-5 h-5 mr-2 text-orange-200" /> Sunday Hours
           </h3>
           <div className="flex items-center justify-between">
             {clinicSettings.sundayHours ? (
@@ -848,7 +828,7 @@ export default function AdminSettingPage() {
           </div>
           <button
             onClick={addCustomHour}
-            className="mt-3 px-4 py-1.5 rounded-md font-medium bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 transition-all duration-200"
+            className="cursor-pointer mt-3 px-4 py-1.5 rounded-md font-medium bg-blue-700/40 hover:bg-blue-900/50 text-blue-300 transition-all duration-200"
           >
             Add Custom Date
           </button>
@@ -857,7 +837,7 @@ export default function AdminSettingPage() {
         {/* Recurring Monthly Closures */}
         <div className="bg-white/5 p-4 rounded-lg border border-white/15 lg:col-span-2">
           <h3 className="text-lg font-semibold text-slate-300 mb-3 flex items-center">
-            <Repeat className="w-5 h-5 mr-2 text-indigo-400" /> Recurring
+            <Repeat className="w-5 h-5 mr-2 text-indigo-200" /> Recurring
             Monthly Closures
           </h3>
           <div className="space-y-3 max-h-64 overflow-y-auto pr-3">
@@ -937,7 +917,7 @@ export default function AdminSettingPage() {
           </div>
           <button
             onClick={addRecurringClosure}
-            className="mt-3 px-4 py-1.5 rounded-md font-medium bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 transition-all duration-200"
+            className="cursor-pointer mt-3 px-4 py-1.5 rounded-md font-medium bg-blue-700/40 hover:bg-blue-900/50 text-blue-300 transition-all duration-200"
           >
             Add Recurring Closure
           </button>
@@ -1026,7 +1006,7 @@ export default function AdminSettingPage() {
                   <td className="px-6 py-4 whitespace-pre-wrap text-sm text-slate-300 max-w-xs">
                     {service.description}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white text-center">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {service.durationMinutes}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-green-400 font-medium">
@@ -1312,15 +1292,6 @@ export default function AdminSettingPage() {
             </div>
           </div>
 
-          {/* Error Display for Appointments */}
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl mb-6 backdrop-blur-sm">
-              <div className="flex items-center">
-                {" "}
-                <span className="mr-2">⚠️</span> Error: {error}
-              </div>
-            </div>
-          )}
 
           {/* Tab Navigation */}
           <div className="mb-8 flex space-x-4 border-b border-white/20">

@@ -1,18 +1,21 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import "react-calendar/dist/Calendar.css"; // Imported, but not used in AdminDashboardPage
 import {
   format,
   parseISO,
   isToday,
   isTomorrow,
   isValid,
-  parse,
+  addDays, // Needed for calculating end of week
+  startOfWeek, // Needed for calculating start of week
+  isWithinInterval, // Useful for checking if a date is within the week
 } from "date-fns";
 import {
   Trash2,
   RefreshCw,
-  Calendar,
+  Calendar as CalendarIcon, // Renamed to avoid conflict with react-calendar
   User,
   Clock,
   Filter,
@@ -196,8 +199,14 @@ export default function AdminDashboardPage() {
   const sortedAppointments = [...appointments].sort((a, b) => {
     const dateA = parseISO(a.appointmentDate);
     const dateB = parseISO(b.appointmentDate);
+    if (!isValid(dateA) && isValid(dateB)) return 1;
+    if (isValid(dateA) && !isValid(dateB)) return -1;
+    if (!isValid(dateA) && !isValid(dateB)) return 0;
+
     if (dateA < dateB) return -1;
     if (dateA > dateB) return 1;
+
+    // If dates are the same, sort by time
     if (a.appointmentTime < b.appointmentTime) return -1;
     if (a.appointmentTime > b.appointmentTime) return 1;
     return 0;
@@ -207,13 +216,50 @@ export default function AdminDashboardPage() {
     (a) => filterStatus === "all" || a.status === filterStatus
   );
 
-  const todayAppointments = sortedAppointments.filter((app) =>
-    isToday(parseISO(app.appointmentDate))
-  );
+  // --- Calculate Weekly Appointments ---
+  const today = new Date();
+  const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 0 }); // Assuming Sunday is the start of the week
+  const endOfCurrentWeek = addDays(startOfCurrentWeek, 6); // 6 days after start makes it end of week (Saturday)
 
-  const tomorrowAppointments = sortedAppointments.filter((app) =>
-    isTomorrow(parseISO(app.appointmentDate))
-  );
+  const todayAppointments = sortedAppointments.filter((app) => {
+    const appDate = parseISO(app.appointmentDate);
+    return isValid(appDate) && isToday(appDate);
+  });
+
+  const tomorrowAppointments = sortedAppointments.filter((app) => {
+    const appDate = parseISO(app.appointmentDate);
+    return isValid(appDate) && isTomorrow(appDate);
+  });
+
+  // Filter appointments for the current week (excluding today and tomorrow, which are handled separately)
+  const thisWeekAppointments = sortedAppointments.filter((app) => {
+    const appDate = parseISO(app.appointmentDate);
+    return (
+      isValid(appDate) &&
+      !isToday(appDate) &&
+      !isTomorrow(appDate) &&
+      isWithinInterval(appDate, {
+        start: addDays(startOfCurrentWeek, 2), // Start after today and tomorrow
+        end: endOfCurrentWeek,
+      })
+    );
+  });
+
+  // Group remaining appointments by day of the week
+  const groupedThisWeek = thisWeekAppointments.reduce((acc: Record<string, Appointment[]>, app) => {
+    const appDate = parseISO(app.appointmentDate);
+    if (!isValid(appDate)) return acc;
+
+    const dayOfWeek = format(appDate, 'EEEE'); // e.g., "Wednesday"
+    if (!acc[dayOfWeek]) {
+      acc[dayOfWeek] = [];
+    }
+    acc[dayOfWeek].push(app);
+    return acc;
+  }, {});
+
+  // Function to get the days of the week in order for display
+  const orderedDays = ["Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]; // Assuming Monday-Friday are regular, Saturday/Sunday are special. We've already handled today/tomorrow.
 
   const getStats = () => {
     const total = appointments.length;
@@ -278,7 +324,7 @@ export default function AdminDashboardPage() {
                   <p className="text-2xl font-bold text-white">{stats.total}</p>
                 </div>
                 <div className="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-white" />
+                  <CalendarIcon className="w-5 h-5 text-white" />
                 </div>
               </div>
             </div>
@@ -345,13 +391,15 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* Upcoming Appointments Section (Admin View Only - Kept for context, but can be removed if strictly user-facing) */}
+          {/* Upcoming Appointments Section */}
           {(todayAppointments.length > 0 ||
-            tomorrowAppointments.length > 0) && (
+            tomorrowAppointments.length > 0 ||
+            thisWeekAppointments.length > 0) && (
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-8">
               <h2 className="text-xl font-bold text-white mb-4">
-                Upcoming Appointments
+                Upcoming Appointments (This Week)
               </h2>
+
               {todayAppointments.length > 0 && (
                 <>
                   <h3 className="text-lg font-semibold text-slate-300 mb-2">
@@ -406,7 +454,7 @@ export default function AdminDashboardPage() {
                   <h3 className="text-lg font-semibold text-slate-300 mb-2">
                     Tomorrow
                   </h3>
-                  <ul className="space-y-3">
+                  <ul className="space-y-3 mb-4">
                     {tomorrowAppointments.map((app) => (
                       <li
                         key={app._id}
@@ -414,7 +462,7 @@ export default function AdminDashboardPage() {
                       >
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
-                            <Calendar className="w-4 h-4 text-purple-400" />
+                            <CalendarIcon className="w-4 h-4 text-purple-400" />
                           </div>
                           <div>
                             <p className="font-medium text-white">
@@ -445,6 +493,71 @@ export default function AdminDashboardPage() {
                     ))}
                   </ul>
                 </>
+              )}
+
+              {/* Render other days of the week if they have appointments */}
+              {orderedDays.map(day => {
+                const appointmentsForDay = groupedThisWeek[day];
+                if (appointmentsForDay && appointmentsForDay.length > 0) {
+                  return (
+                    <React.Fragment key={day}>
+                      <h3 className="text-lg font-semibold text-slate-300 mb-2">
+                        {day}
+                      </h3>
+                      <ul className="space-y-3 mb-4">
+                        {appointmentsForDay.map((app) => (
+                          <li
+                            key={app._id}
+                            className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/15 text-slate-200"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                                <CalendarIcon className="w-4 h-4 text-green-400" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-white">
+                                  {app.patientName}
+                                </p>
+                                <p className="text-xs text-slate-300">
+                                  {app.appointmentTime}
+                                </p>
+                              </div>
+                              <div className="text-xs italic text-slate-300">
+                                {app.reason || ""}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(
+                                  app.status
+                                )}`}
+                              >
+                                {getStatusIcon(app.status)} {app.status}
+                              </span>
+                              <button
+                                onClick={() => handleDelete(app._id)}
+                                className="p-1 rounded-md transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
+                                aria-label="Delete appointment"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </React.Fragment>
+                  );
+                }
+                return null; // Don't render anything if no appointments for this day
+              })}
+
+              {/* Message if no upcoming appointments found */}
+              {todayAppointments.length === 0 &&
+               tomorrowAppointments.length === 0 &&
+               thisWeekAppointments.length === 0 && (
+                <p className="text-center text-slate-400 py-4">
+                  No upcoming appointments this week.
+                </p>
               )}
             </div>
           )}
@@ -527,7 +640,7 @@ export default function AdminDashboardPage() {
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                       <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2" /> Date & Time
+                        <CalendarIcon className="w-4 h-4 mr-2" /> Date & Time
                       </div>
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
@@ -561,7 +674,7 @@ export default function AdminDashboardPage() {
                         className="text-center px-6 py-12 text-slate-300"
                       >
                         <div className="flex flex-col items-center">
-                          <Calendar className="w-8 h-8 mb-4 opacity-50" />
+                          <CalendarIcon className="w-8 h-8 mb-4 opacity-50" />
                           <p>No appointments found</p>
                         </div>
                       </td>
@@ -650,19 +763,17 @@ export default function AdminDashboardPage() {
                                 </svg>
                               </div>
                             </div>
+                            <button
+                              onClick={() => handleDelete(app._id)}
+                              className="p-2 rounded-lg transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
+                              aria-label="Delete appointment"
+                              style={{
+                                backgroundColor: "rgba(239, 68, 68, 0.15)",
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleDelete(app._id)}
-                            className="p-2 rounded-lg transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
-                            aria-label="Delete appointment"
-                            style={{
-                              backgroundColor: "rgba(239, 68, 68, 0.15)",
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </td>
                       </tr>
                     ))

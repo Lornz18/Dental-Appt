@@ -8,7 +8,7 @@ import { connectToDB } from '@/app/utils/mongodb'; // Assuming you have a db con
  * @description Get all services
  * @access Public (or protected if you add auth middleware)
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     await connectToDB(); // Ensure database connection
 
@@ -21,12 +21,12 @@ export async function GET(req: NextRequest) {
       data: services,
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching services:", error);
     return NextResponse.json({
       success: false,
       message: 'Server error fetching services',
-      error: error.message || 'An unknown error occurred',
+      error: (error as Error).message || 'An unknown error occurred',
     }, { status: 500 });
   }
 }
@@ -64,31 +64,13 @@ export async function POST(req: NextRequest) {
       data: service,
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating service:", error);
-
-    // Handle Mongoose validation errors
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((err: any) => err.message);
-      return NextResponse.json({
-        success: false,
-        message: 'Validation Error',
-        details: messages,
-      }, { status: 400 });
-    }
-
-    // Handle potential duplicate key errors (e.g., if you add a unique constraint later)
-    if (error.code === 11000) {
-      return NextResponse.json({
-        success: false,
-        message: 'Service with this name/identifier already exists',
-      }, { status: 409 }); // 409 Conflict
-    }
 
     return NextResponse.json({
       success: false,
       message: 'Server error creating service',
-      error: error.message || 'An unknown error occurred',
+      error: (error as Error).message || 'An unknown error occurred',
     }, { status: 500 });
   }
 }

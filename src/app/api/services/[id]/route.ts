@@ -34,19 +34,13 @@ export async function GET(req: NextRequest, context: Context) {
       data: service,
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error fetching service ${id}:`, error);
     // Handle Mongoose CastError for invalid IDs
-    if (error.kind === 'ObjectId') {
-      return NextResponse.json({
-        success: false,
-        message: `Invalid Service ID format: ${id}`,
-      }, { status: 400 }); // Bad Request for malformed ID
-    }
     return NextResponse.json({
       success: false,
       message: `Server error fetching service ${id}`,
-      error: error.message || 'An unknown error occurred',
+      error: (error as Error).message || 'An unknown error occurred',
     }, { status: 500 });
   }
 }
@@ -97,31 +91,13 @@ export async function PUT(req: NextRequest, context: Context) {
       data: service,
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error updating service ${id}:`, error);
-
-    // Handle Mongoose CastError for invalid IDs
-    if (error.kind === 'ObjectId') {
-      return NextResponse.json({
-        success: false,
-        message: `Invalid Service ID format: ${id}`,
-      }, { status: 400 });
-    }
-
-    // Handle Mongoose validation errors during update
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((err: any) => err.message);
-      return NextResponse.json({
-        success: false,
-        message: 'Validation Error during update',
-        details: messages,
-      }, { status: 400 });
-    }
 
     return NextResponse.json({
       success: false,
       message: `Server error updating service ${id}`,
-      error: error.message || 'An unknown error occurred',
+      error: (error as Error).message || 'An unknown error occurred',
     }, { status: 500 });
   }
 }
@@ -152,20 +128,13 @@ export async function DELETE(req: NextRequest, context: Context) {
       data: {}, // Often return empty data on successful delete
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Error deleting service ${id}:`, error);
-    // Handle Mongoose CastError for invalid IDs
-    if (error.kind === 'ObjectId') {
-      return NextResponse.json({
-        success: false,
-        message: `Invalid Service ID format: ${id}`,
-      }, { status: 400 });
-    }
 
     return NextResponse.json({
       success: false,
       message: `Server error deleting service ${id}`,
-      error: error.message || 'An unknown error occurred',
+      error: (error as Error).message || 'An unknown error occurred',
     }, { status: 500 });
   }
 }
