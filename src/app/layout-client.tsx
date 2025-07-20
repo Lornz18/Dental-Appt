@@ -27,7 +27,7 @@ const LayoutClientWrapper = ({ children }: { children: ReactNode }) => {
   return (
     <>
       {/* Toaster should generally be on the client side */}
-      <div id="modal-root"></div>
+      <div id="modal-root" className="relative z-50"></div>
       <Toaster position="top-right" reverseOrder={false} />
       {showHeader && <Header />}
       {children}

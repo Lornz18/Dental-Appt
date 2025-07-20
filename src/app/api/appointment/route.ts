@@ -16,14 +16,58 @@ export async function POST(request: Request) {
         await connectToDB();
 
         const body = await request.json();
-        const appointment = new Appointment(body);
+        console.log('Received appointment data:', body);
+
+        // Explicitly map fields to ensure correct type handling by Mongoose
+        const appointmentData = {
+            patientName: body.patientName,
+            email: body.email, // Assuming email is also sent and needed
+            appointmentDate: body.appointmentDate ? new Date(body.appointmentDate) : undefined, // Convert string date to Date object
+            appointmentTime: body.appointmentTime,
+            reason: body.reason,
+            durationMinutes: body.durationMinutes, // This is the field we want to ensure is passed
+            status: body.status || 'pending', // Ensure status is handled, default to 'pending'
+        };
+
+        console.log('Mapped appointment data:', appointmentData);
+
+        // Check if durationMinutes was actually mapped and is valid
+        if (typeof appointmentData.durationMinutes !== 'number' || appointmentData.durationMinutes <= 0) {
+            console.error('Error: durationMinutes is missing or invalid after mapping.');
+            return NextResponse.json(
+                { success: false, error: 'Appointment duration is missing or invalid.' },
+                { status: 400 }
+            );
+        }
+
+        // Now, create the Mongoose document with the explicitly mapped and potentially type-converted data
+        const appointment = new Appointment({
+            patientName: body.patientName,
+            email: body.email, // Assuming email is also sent and needed
+            appointmentDate: body.appointmentDate ? new Date(body.appointmentDate) : undefined, // Convert string date to Date object
+            appointmentTime: body.appointmentTime,
+            reason: body.reason,
+            durationMinutes: body.durationMinutes, // This is the field we want to ensure is passed
+            status: body.status || 'pending', // Ensure status is handled, default to 'pending'
+        });
+
+        console.log('Creating appointment:', appointment); // Check the created instance
+        console.log('Appointment instance has durationMinutes:', appointment.durationMinutes); // Explicitly log it again
+
         const savedAppointment = await appointment.save();
+        console.log('Saved Appointment:', savedAppointment);
 
         return NextResponse.json({ success: true, id: savedAppointment._id });
     } catch (error) {
-        return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
+        console.error("Error creating appointment:", error); // Log the error
+        if (error instanceof Error) {
+            return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        } else {
+            return NextResponse.json({ success: false, error: 'An unknown error occurred while creating the appointment' }, { status: 500 });
+        }
     }
 }
+
 
 // GET: Get all appointments
 export async function GET() {
