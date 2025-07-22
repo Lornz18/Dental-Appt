@@ -60,7 +60,7 @@ const ServicesPage: React.FC = () => {
             errorMessage = errorData.message || errorMessage; // Use API's message if available
           } catch (jsonError) {
             // If response is not JSON, use the status text
-            errorMessage = response.statusText || errorMessage;
+            errorMessage = response.statusText || errorMessage || (jsonError as Error).message;
           }
           throw new Error(errorMessage);
         }
@@ -146,7 +146,7 @@ const ServicesPage: React.FC = () => {
                 Services Coming Soon
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                We're preparing our comprehensive medical services for you.
+                We&apos;re preparing our comprehensive medical services for you.
                 Please check back soon or contact us for more information.
               </p>
               <button className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium hover:bg-primary/90 transition-all duration-300 transform hover:scale-105">

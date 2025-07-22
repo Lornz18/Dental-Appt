@@ -87,9 +87,9 @@ const ContactPage: React.FC = () => {
           // Handle cases where success is false or settings is null/missing
           throw new Error(data.message || 'Clinic settings not found or invalid data received.');
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Failed to fetch clinic hours:", error);
-        setHoursError(error.message);
+        setHoursError((error as Error).message);
       } finally {
         setHoursLoading(false);
       }
@@ -142,9 +142,9 @@ const ContactPage: React.FC = () => {
       setSubject('');
       setMessage('');
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Form submission error:", error);
-      setSubmissionError(error.message || 'An unexpected error occurred. Please try again.');
+      setSubmissionError((error as Error).message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +169,7 @@ const ContactPage: React.FC = () => {
               Get in Touch
             </h1>
             <p className="text-xl md:text-2xl opacity-90 leading-relaxed">
-              We're here to help and answer any questions you may have
+              We&apos;re here to help and answer any questions you may have
             </p>
           </div>
         </div>
