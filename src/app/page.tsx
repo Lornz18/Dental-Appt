@@ -2,20 +2,88 @@
 
 "use client";
 import { Clipboard, HomeIcon, MessageSquare, Search, } from "lucide-react";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // Import useState
 import Image from "next/image";
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-// You might want to import a dedicated Appointment component if you have one
-// import Appointment from '../components/Appointment';
+
+// Interface for a Service, mirroring your backend model for type safety
+interface Service {
+  _id: string; // Assuming your API returns _id from MongoDB
+  name: string;
+  description: string;
+  durationMinutes: number;
+  price: number;
+  createdAt: Date;
+  updatedAt?: Date;
+}
 
 export default function Home() {
+  const [services, setServices] = useState<Service[]>([]); // State to hold fetched services
+  const [loading, setLoading] = useState(true); // State for loading indicator
+  const [error, setError] = useState<string | null>(null); // State for error handling
 
   useEffect(() => {
     AOS.init({
       duration: 500,
     });
   }, []);
+
+  // Fetch services from the API
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setLoading(true);
+        setError(null); // Reset error on new fetch
+        const response = await fetch('/api/services'); // Your API endpoint for services
+
+        if (!response.ok) {
+          // Handle HTTP errors (e.g., 404, 500)
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        // Assuming your API returns data in a structure like { services: [...] }
+        // Adjust if your API response is different. If it's just an array, use data directly.
+        if (data && Array.isArray(data.data)) {
+          setServices(data.data);
+        } else if (Array.isArray(data)) {
+          setServices(data); // If the API directly returns an array
+        } else {
+          throw new Error("Invalid data format received from API.");
+        }
+
+      } catch (err) {
+        console.error("Failed to fetch services:", err);
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred while fetching services.");
+        }
+        setServices([]); // Clear services on error
+      } finally {
+        setLoading(false); // Set loading to false once fetch is complete
+      }
+    };
+
+    fetchServices();
+  }, []); // Empty dependency array means this effect runs once on mount
+
+  // Helper function to get an icon based on service name (optional, for variety)
+  const getServiceIcon = (serviceName: string) => {
+    switch (serviceName.toLowerCase()) {
+      case 'general dentistry':
+        return <HomeIcon className="text-primary dark:text-primary-dark" />;
+      case 'cosmetic dentistry':
+        return <Search className="text-primary dark:text-primary-dark" />;
+      case 'specialty treatments':
+        return <Clipboard className="text-primary dark:text-primary-dark" />;
+      // Add more cases for other services
+      default:
+        return <Clipboard className="text-primary dark:text-primary-dark" />; // Default icon
+    }
+  };
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center py-16 bg-background text-foreground font-sans transition-colors duration-300 dark:bg-gray-900 dark:text-white">
@@ -36,8 +104,6 @@ export default function Home() {
             >
               Book Your Appointment
             </a>
-            {/* If you have a specific Appointment component: */}
-            {/* <Appointment /> */}
           </div>
         </div>
         <div data-aos="fade-left" className="md:w-1/2 mt-8 md:mt-0 flex justify-center z-10">
@@ -146,7 +212,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Services Section */}
+      {/* Services Section - Dynamically Loaded */}
       <section className="py-20 px-4 w-full mx-auto transition-colors duration-300 bg-primary/5 dark:bg-gray-900 text-foreground dark:text-white">
         <div className="max-w-7xl mx-auto">
           <div data-aos="fade-top" className="text-center mb-16">
@@ -158,50 +224,58 @@ export default function Home() {
               spectrum of dental solutions.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Service 1 */}
-            <div className="flex items-center bg-white p-5 rounded-lg shadow-sm hover:shadow-xl transition duration-300 animate-fadeIn animation-delay-400 dark:bg-gray-700 dark:hover:shadow-xl">
-              <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary/10 dark:bg-primary-dark/20 flex items-center justify-center mr-5">
-                <HomeIcon className="text-primary"></HomeIcon>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground dark:text-white">
-                  General Dentistry
-                </h3>
-                <p className="text-foreground/70 dark:text-gray-300 text-sm">
-                  Check-ups, cleanings, fillings.
-                </p>
-              </div>
+
+          {/* Loading and Error States */}
+          {loading && (
+            <div className="text-center py-10">
+              <p className="text-foreground/70 dark:text-gray-300 animate-pulse">Loading services...</p>
             </div>
-            {/* Service 2 */}
-            <div className="flex items-center bg-white p-5 rounded-lg shadow-sm hover:shadow-xl transition duration-300 animate-fadeIn animation-delay-600 dark:bg-gray-700 dark:hover:shadow-xl">
-              <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary/10 dark:bg-primary-dark/20 flex items-center justify-center mr-5">
-                <Search className="text-primary"></Search>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground dark:text-white">
-                  Cosmetic Dentistry
-                </h3>
-                <p className="text-foreground/70 dark:text-gray-300 text-sm">
-                  Whitening, veneers, bonding.
-                </p>
-              </div>
+          )}
+          {error && (
+            <div className="text-center py-10 text-red-500">
+              <p>{error}</p>
             </div>
-            {/* Service 3 */}
-            <div className="flex items-center bg-white p-5 rounded-lg shadow-sm hover:shadow-xl transition duration-300 animate-fadeIn animation-delay-800 dark:bg-gray-700 dark:hover:shadow-xl">
-              <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary/10 dark:bg-primary-dark/20 flex items-center justify-center mr-5">
-                <Clipboard className="text-primary"></Clipboard>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground dark:text-white">
-                  Specialty Treatments
-                </h3>
-                <p className="text-foreground/70 dark:text-gray-300 text-sm">
-                  Implants, orthodontics.
-                </p>
-              </div>
+          )}
+
+          {/* Services Grid */}
+          {!loading && !error && services.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {services.map((service, index) => (
+                <div
+                  key={service._id} // Use the unique _id as the key
+                  className="flex items-center bg-white p-5 rounded-lg shadow-sm hover:shadow-xl transition duration-300 animate-fadeIn"
+                  style={{ animationDelay: `${index * 200 + 400}ms` }} // Stagger animation
+                  data-aos="fade-up" // Re-apply AOS to dynamically loaded content
+                  data-aos-delay={index * 200 + 400}
+                  data-aos-duration="500"
+                >
+                  <div className="flex-shrink-0 w-16 h-16 rounded-full bg-primary/10 dark:bg-primary-dark/20 flex items-center justify-center mr-5">
+                    {getServiceIcon(service.name)} {/* Use the helper function */}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground dark:text-white">
+                      {service.name}
+                    </h3>
+                    <p className="text-foreground/70 dark:text-gray-300 text-sm">
+                      {service.description}
+                    </p>
+                    {/* Optional: Display price and duration if relevant here */}
+                    {/* <p className="text-sm text-foreground/60 dark:text-gray-400 mt-1">
+                      ${service.price.toFixed(2)} | {service.durationMinutes} min
+                    </p> */}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
+
+          {/* No services found message */}
+          {!loading && !error && services.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-foreground/70 dark:text-gray-300">No services available at the moment.</p>
+            </div>
+          )}
+
           <div className="text-center mt-12 animate-fadeIn animation-delay-1000">
             <a href="/service" className="bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-primary-dark dark:text-primary-dark dark:hover:bg-primary-dark dark:hover:text-white font-bold py-3 px-7 rounded-lg text-lg transition duration-300 ease-in-out">
               View All Services
@@ -239,8 +313,8 @@ export default function Home() {
               Lead Dentist
             </p>
             <p className="text-foreground/70 dark:text-gray-300 text-sm">
-              &apos;Dedicated to creating healthy, beautiful smiles with a gentle
-              approach.&apos;
+              'Dedicated to creating healthy, beautiful smiles with a gentle
+              approach.'
             </p>
             <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               View Profile
@@ -264,7 +338,7 @@ export default function Home() {
               Dental Hygienist
             </p>
             <p className="text-foreground/70 dark:text-gray-300 text-sm">
-              &apos;Passionate about preventative care and patient education.&apos;
+              'Passionate about preventative care and patient education.'
             </p>
             <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               View Profile
@@ -288,7 +362,7 @@ export default function Home() {
               Orthodontist
             </p>
             <p className="text-foreground/70 dark:text-gray-300 text-sm">
-              &apos;Crafting perfect smiles with personalized orthodontic solutions.&apos;
+              'Crafting perfect smiles with personalized orthodontic solutions.'
             </p>
             <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               View Profile
@@ -314,7 +388,7 @@ export default function Home() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-xl font-semibold text-foreground dark:text-white">
-                    &apos;Absolutely fantastic experience!&apos;
+                    'Absolutely fantastic experience!'
                   </p>
                   <p className="text-foreground/80 dark:text-gray-300">
                     The staff were incredibly friendly and made me feel very
@@ -325,19 +399,10 @@ export default function Home() {
                 <MessageSquare className="text-primary"></MessageSquare>
               </div>
               <p className="text-foreground/70 dark:text-gray-300 mb-3">
-                &apos;The clinic is modern, clean, and the staff is very professional
-                and caring. Dr. Carter explained everything clearly.&apos;
+                'The clinic is modern, clean, and the staff is very professional
+                and caring. Dr. Carter explained everything clearly.'
               </p>
               <div className="flex items-center">
-                <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-primary/30 dark:border-primary-dark/30">
-                  <Image
-                    src="/images/patient-avatar-1.jpg"
-                    alt="Patient Avatar"
-                    width={48}
-                    height={48}
-                    objectFit="cover"
-                  />
-                </div>
                 <div>
                   <p className="font-bold text-foreground dark:text-white">
                     Sarah J.
@@ -353,7 +418,7 @@ export default function Home() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-xl font-semibold text-foreground dark:text-white">
-                    &apos;Highly recommend this practice!&apos;
+                    'Highly recommend this practice!'
                   </p>
                   <p className="text-foreground/80 dark:text-gray-300">
                     My daughter felt so at ease during her first visit.
@@ -362,20 +427,11 @@ export default function Home() {
                 <MessageSquare className="text-primary"></MessageSquare>
               </div>
               <p className="text-foreground/70 dark:text-gray-300 mb-3">
-                &apos;We recently switched to this clinic and are so pleased with the
+                'We recently switched to this clinic and are so pleased with the
                 quality of care and the welcoming atmosphere. The hygienist was
-                very gentle.&apos;
+                very gentle.'
               </p>
               <div className="flex items-center">
-                <div className="w-12 h-12 rounded-full overflow-hidden mr-4 border-2 border-secondary/30 dark:border-secondary-dark/30">
-                  <Image
-                    src="/images/patient-avatar-2.jpg"
-                    alt="Patient Avatar"
-                    width={48}
-                    height={48}
-                    objectFit="cover"
-                  />
-                </div>
                 <div>
                   <p className="font-bold text-foreground dark:text-white">
                     Michael R.
@@ -396,15 +452,13 @@ export default function Home() {
           Ready for a Healthier Smile?
         </h2>
         <p className="text-lg text-foreground/70 mb-10 max-w-2xl mx-auto animate-fadeIn animation-delay-200 dark:text-gray-300">
-          Don&apos;t wait to achieve the smile you deserve. Schedule your
+          Don't wait to achieve the smile you deserve. Schedule your
           consultation today.
         </p>
         <div className="animate-fadeIn animation-delay-400">
           <a href="/appointment" className="cursor-pointer bg-primary hover:bg-secondary text-white font-bold py-4 px-9 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
             Book Your Appointment Now
           </a>
-          {/* If you have a specific Appointment component: */}
-          {/* <Appointment /> */}
         </div>
       </section>
     </main>
