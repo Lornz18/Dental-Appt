@@ -20,6 +20,17 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+# Testing Admin
+To test the admin panel, visit:
+
+http://localhost:3000/admin
+
+Use the following credentials:
+
+Username: admin@example.com
+
+Password: admin123
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

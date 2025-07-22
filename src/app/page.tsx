@@ -32,7 +32,7 @@ export default function Home() {
           <div data-aos="fade-bottom" className="flex justify-center md:justify-start animate-fadeIn animation-delay-400">
             <a
               href="/appointment"
-              className="bg-primary hover:bg-secondary text-white hover:text-primary dark:hover:text-primary dark:bg-primary-dark dark:hover:bg-secondary-dark font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 inline-block"
+              className="cursor-pointer bg-primary hover:bg-secondary text-white hover:text-primary dark:hover:text-primary dark:bg-primary-dark dark:hover:bg-secondary-dark font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 inline-block"
             >
               Book Your Appointment
             </a>
@@ -203,9 +203,9 @@ export default function Home() {
             </div>
           </div>
           <div className="text-center mt-12 animate-fadeIn animation-delay-1000">
-            <button className="bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-primary-dark dark:text-primary-dark dark:hover:bg-primary-dark dark:hover:text-white font-bold py-3 px-7 rounded-lg text-lg transition duration-300 ease-in-out">
+            <a href="/service" className="bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-primary-dark dark:text-primary-dark dark:hover:bg-primary-dark dark:hover:text-white font-bold py-3 px-7 rounded-lg text-lg transition duration-300 ease-in-out">
               View All Services
-            </button>
+            </a>
           </div>
         </div>
       </section>
@@ -242,9 +242,9 @@ export default function Home() {
               &apos;Dedicated to creating healthy, beautiful smiles with a gentle
               approach.&apos;
             </p>
-            <button className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
-              Learn More
-            </button>
+            <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
+              View Profile
+            </a>
           </div>
           {/* Dentist 2 */}
           <div className="flex flex-col items-center text-center rounded-lg shadow-sm bg-white p-6 hover:shadow-xl transition duration-300 animate-fadeIn animation-delay-600 dark:bg-gray-700 dark:hover:shadow-xl">
@@ -266,9 +266,9 @@ export default function Home() {
             <p className="text-foreground/70 dark:text-gray-300 text-sm">
               &apos;Passionate about preventative care and patient education.&apos;
             </p>
-            <button className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
-              Learn More
-            </button>
+            <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
+              View Profile
+            </a>
           </div>
           {/* Dentist 3 */}
           <div className="flex flex-col items-center text-center rounded-lg shadow-sm bg-white p-6 hover:shadow-xl transition duration-300 animate-fadeIn animation-delay-800 dark:bg-gray-700 dark:hover:shadow-xl">
@@ -290,9 +290,9 @@ export default function Home() {
             <p className="text-foreground/70 dark:text-gray-300 text-sm">
               &apos;Crafting perfect smiles with personalized orthodontic solutions.&apos;
             </p>
-            <button className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
-              Learn More
-            </button>
+            <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
+              View Profile
+            </a>
           </div>
         </div>
       </section>
@@ -400,9 +400,9 @@ export default function Home() {
           consultation today.
         </p>
         <div className="animate-fadeIn animation-delay-400">
-          <button className="bg-primary hover:bg-secondary text-white font-bold py-4 px-9 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
+          <a href="/appointment" className="cursor-pointer bg-primary hover:bg-secondary text-white font-bold py-4 px-9 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
             Book Your Appointment Now
-          </button>
+          </a>
           {/* If you have a specific Appointment component: */}
           {/* <Appointment /> */}
         </div>

@@ -181,12 +181,12 @@ const AboutPage: React.FC = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
+                <a href='/appointment' className="bg-primary hover:bg-primary/90 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
                   Schedule Appointment
-                </button>
-                <button className="bg-transparent hover:bg-secondary/10 text-secondary border-2 border-secondary font-semibold py-4 px-8 rounded-xl hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                </a>
+                <a href='/contact' className="bg-transparent hover:bg-secondary/10 text-secondary border-2 border-secondary font-semibold py-4 px-8 rounded-xl hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
                   Contact Us
-                </button>
+                </a>
               </div>
             </div>
           </section>
