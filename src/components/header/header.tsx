@@ -40,7 +40,7 @@ export function Header() {
               </li>
               <li>
                 <a
-                  href="/about"
+                  href="/service"
                   className="hover:text-primary transition-all duration-300"
                 >
                   Services
@@ -48,7 +48,7 @@ export function Header() {
               </li>
             </ul>
           </nav>
-          <button className="btn-primary cursor-pointer">Contact Us</button>
+          <a href="/contact" className="btn-primary cursor-pointer">Contact Us</a>
         </div>
       </div>
     </header>

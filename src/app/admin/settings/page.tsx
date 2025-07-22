@@ -585,7 +585,7 @@ export default function AdminSettingPage() {
           className={`flex items-center px-5 py-2 rounded-xl font-medium transition-all duration-200 ${
             settingsLoading
               ? "bg-slate-600 cursor-not-allowed"
-              : "bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+              : "bg-gradient-to-r from-white/10 to-primary hover:scale-105 transition-all duration-300"
           } text-white`}
         >
           <RefreshCw
@@ -934,7 +934,7 @@ export default function AdminSettingPage() {
         </h2>
         <button
           onClick={handleOpenAddServiceForm}
-          className="flex items-center px-5 py-2 rounded-xl font-medium transition-all duration-200 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-50"
+          className="flex items-center px-5 py-2 rounded-xl font-medium transition-all duration-200 bg-gradient-to-r from-white/10 to-primary hover:scale-105 text-white shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-50"
         >
           <Plus className="w-4 h-4 mr-2" /> Add New Service
         </button>
@@ -1255,7 +1255,7 @@ export default function AdminSettingPage() {
 
   // --- Main Render ---
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-600 via-primary to-slate-400 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-600 to-primary text-white">
       <div className="relative z-10 py-8 px-4 sm:px-6 lg:px-8 container">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -1263,16 +1263,16 @@ export default function AdminSettingPage() {
             <div className="flex items-center space-x-3 mb-4 sm:mb-0">
               <Link
                 href={"/admin/dashboard"}
-                className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center"
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
               >
                 <BarChart3 className="w-6 h-6 text-white" />
               </Link>
               <div>
                 <h1 className="text-3xl font-bold text-white">
-                  Admin Dashboard
+                  Admin Settings
                 </h1>
                 <p className="text-slate-300">
-                  Manage appointments and clinic settings
+                  Manage services and clinic settings
                 </p>
               </div>
             </div>
@@ -1297,9 +1297,9 @@ export default function AdminSettingPage() {
           <div className="mb-8 flex space-x-4 border-b border-white/20">
             <button
               onClick={() => setActiveTab("settings")}
-              className={`py-3 px-6 rounded-t-lg font-medium transition-all duration-300 flex items-center space-x-2 ${
+              className={`cursor-pointer py-3 px-6 rounded-t-lg font-medium transition-all duration-300 flex items-center space-x-2 ${
                 activeTab === "settings"
-                  ? "bg-white/15 text-white border-b-2 border-purple-500"
+                  ? "bg-white/15 text-white border-b-2 border-primary"
                   : "bg-transparent text-slate-300 hover:text-white"
               }`}
             >
@@ -1308,9 +1308,9 @@ export default function AdminSettingPage() {
             </button>
             <button
               onClick={() => setActiveTab("services")}
-              className={`py-3 px-6 rounded-t-lg font-medium transition-all duration-300 flex items-center space-x-2 ${
+              className={`cursor-pointer py-3 px-6 rounded-t-lg font-medium transition-all duration-300 flex items-center space-x-2 ${
                 activeTab === "services"
-                  ? "bg-white/15 text-white border-b-2 border-cyan-500"
+                  ? "bg-white/15 text-white border-b-2 border-primary"
                   : "bg-transparent text-slate-300 hover:text-white"
               }`}
             >

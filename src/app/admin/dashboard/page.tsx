@@ -281,13 +281,13 @@ export default function AdminDashboardPage() {
 
   // --- JSX Rendering ---
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-600 via-primary to-slate-400 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-600  to-primary text-white">
       <div className="relative z-10 py-8 px-4 sm:px-6 lg:px-8 container">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
             <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -618,7 +618,7 @@ export default function AdminDashboardPage() {
                 className={`flex items-center px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
                   loading
                     ? "bg-slate-600 cursor-not-allowed"
-                    : "bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                    : "bg-gradient-to-r from-white/10 to-primary hover:scale-105 transition-all duration-300"
                 } text-white`}
               >
                 <RefreshCw

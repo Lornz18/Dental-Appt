@@ -44,7 +44,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-primary to-secondary flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-slate-600 to-primary flex items-center justify-center p-4">
       {/* Login Card */}
       <div className="relative w-full max-w-md">
         {/* Glass morphism card */}

@@ -2,24 +2,34 @@
 
 "use client";
 import { Clipboard, HomeIcon, MessageSquare, Search, } from "lucide-react";
+import { useEffect } from 'react';
 import Image from "next/image";
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 // You might want to import a dedicated Appointment component if you have one
 // import Appointment from '../components/Appointment';
 
 export default function Home() {
+
+  useEffect(() => {
+    AOS.init({
+      duration: 500,
+    });
+  }, []);
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center py-16 bg-background text-foreground font-sans transition-colors duration-300 dark:bg-gray-900 dark:text-white">
       {/* Hero Section */}
       <section className="relative w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12 px-4">
         <div className="md:w-1/2 text-center md:text-left z-10">
-          <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-4 text-foreground dark:text-white animate-fadeIn">
+          <h1 data-aos="fade-up" className="text-5xl md:text-6xl font-bold leading-tight mb-4 text-foreground dark:text-white animate-fadeIn">
             Experience Your Healthiest Smile.
           </h1>
-          <p className="text-xl md:text-2xl text-foreground/80 mb-8 animate-fadeIn animation-delay-200 dark:text-gray-300">
+          <p data-aos="fade-right" className="text-xl md:text-2xl text-foreground/80 mb-8 animate-fadeIn animation-delay-200 dark:text-gray-300">
             Discover compassionate, advanced dental care tailored to your unique
             needs.
           </p>
-          <div className="flex justify-center md:justify-start animate-fadeIn animation-delay-400">
+          <div data-aos="fade-bottom" className="flex justify-center md:justify-start animate-fadeIn animation-delay-400">
             <a
               href="/appointment"
               className="bg-primary hover:bg-secondary text-white hover:text-primary dark:hover:text-primary dark:bg-primary-dark dark:hover:bg-secondary-dark font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 inline-block"
@@ -30,7 +40,7 @@ export default function Home() {
             {/* <Appointment /> */}
           </div>
         </div>
-        <div className="md:w-1/2 mt-8 md:mt-0 flex justify-center z-10">
+        <div data-aos="fade-left" className="md:w-1/2 mt-8 md:mt-0 flex justify-center z-10">
           <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-xl">
             <Image
               src="/banner.jpg"
@@ -45,7 +55,7 @@ export default function Home() {
 
       {/* Why Choose Us Section */}
       <section className="py-20 px-4 max-w-7xl mx-auto w-full transition-colors duration-300 bg-white dark:bg-gray-900 dark:text-white">
-        <div className="text-center mb-16">
+        <div data-aos="fade-top"  className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4 text-foreground dark:text-white animate-fadeIn">
             Why Choose Our Clinic?
           </h2>
@@ -139,7 +149,7 @@ export default function Home() {
       {/* Services Section */}
       <section className="py-20 px-4 w-full mx-auto transition-colors duration-300 bg-primary/5 dark:bg-gray-900 text-foreground dark:text-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div data-aos="fade-top" className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4 text-foreground dark:text-white animate-fadeIn">
               Our Comprehensive Services
             </h2>
@@ -202,7 +212,7 @@ export default function Home() {
 
       {/* Our Team Section */}
       <section className="py-20 px-4 max-w-7xl mx-auto w-full transition-colors duration-300 bg-white dark:bg-gray-900 dark:text-white">
-        <div className="text-center mb-16">
+        <div data-aos="fade-top" className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4 text-foreground dark:text-white animate-fadeIn">
             Meet Our Expert Team
           </h2>
@@ -290,7 +300,7 @@ export default function Home() {
       {/* Testimonials Section */}
       <section className="py-20 px-4 mx-auto w-full transition-colors duration-300 bg-primary/5 dark:bg-gray-900 dark:text-white">
         <div className="container">
-          <div className="text-center mb-16">
+          <div data-aos="fade-top" className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4 text-foreground dark:text-white animate-fadeIn">
               What Our Patients Say
             </h2>

@@ -165,19 +165,6 @@ export default function DentistTeamPage() {
                       )}
                     </div>
                   </div>
-
-                  {/* CTA Button */}
-                  <div className="text-center">
-                    <Link
-                      href={`/dentists/${dentist.id}`}
-                      className="inline-flex items-center px-8 py-3 bg-primary text-background font-semibold rounded-full hover:bg-primary/90 hover:scale-105 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/25"
-                    >
-                      View Full Profile
-                      <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
                 </div>
 
                 {/* Decorative corner accent */}
