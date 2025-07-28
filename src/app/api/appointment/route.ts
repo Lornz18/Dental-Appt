@@ -19,7 +19,7 @@ async function connectToDB() {
  * This is a "fire-and-forget" operation from the perspective of the API route.
  * @param message - The JavaScript object to send as the notification.
  */
-function notifyWebSocketServer(message: object): void {
+async function notifyWebSocketServer(message: object) {
   if (!WS_URL) {
     console.error("WebSocket URL is not configured.");
     return;
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     // The signal is now more generic, telling clients "there's a new alert".
     // The client should then fetch from a new `/api/alerts` endpoint.
     console.log("Sending notification signal to WebSocket server...");
-    notifyWebSocketServer({
+    await notifyWebSocketServer({
       type: "new-alert", // Use a generic signal
       payload: {
         message: `New pending appointment from ${savedAppointment.patientName}.`,
