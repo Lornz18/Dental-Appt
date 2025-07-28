@@ -1,9 +1,0 @@
-{
-  "regions": ["hnd1"],
-  "functions": {
-    "pages/api/heavy-task.js": {
-      "maxDuration": 30,
-      "memory": 3008
-    }
-  }
-}
