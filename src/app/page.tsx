@@ -278,9 +278,9 @@ export default function Home() {
           )}
 
           <div className="text-center mt-12 animate-fadeIn animation-delay-1000">
-            <a href="/service" className="bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-primary-dark dark:text-primary-dark dark:hover:bg-primary-dark dark:hover:text-white font-bold py-3 px-7 rounded-lg text-lg transition duration-300 ease-in-out">
+            <Link href="/service" className="bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-primary-dark dark:text-primary-dark dark:hover:bg-primary-dark dark:hover:text-white font-bold py-3 px-7 rounded-lg text-lg transition duration-300 ease-in-out">
               View All Services
-            </a>
+            </Link>
           </div>
         </div>
       </section>
