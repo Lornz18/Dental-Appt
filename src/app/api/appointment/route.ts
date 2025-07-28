@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Appointment from "@/app/models/appointment-model"; // Mongoose model
 import Alert from "@/app/models/alert-model";
 import mongoose from "mongoose";
-import WebSocket from "ws"; // Import the 'ws' library to act as a client
+import WebSocket from "isomorphic-ws"; // Import the 'ws' library to act as a client
 
 const MONGODB_URI = process.env.MONGODB_URI || "your-mongodb-connection-string";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
