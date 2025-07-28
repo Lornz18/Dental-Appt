@@ -1,7 +1,9 @@
 {
+  "regions": ["hnd1"],
   "functions": {
-    "app/**/*.js": {
-      "regions": ["hnd1"]
+    "pages/api/heavy-task.js": {
+      "maxDuration": 30,
+      "memory": 3008
     }
   }
 }
