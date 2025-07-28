@@ -317,9 +317,9 @@ export default function Home() {
               &apos;Dedicated to creating healthy, beautiful smiles with a gentle
               approach.&apos;
             </p>
-            <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
+            <Link href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               View Profile
-            </a>
+            </Link>
           </div>
           {/* Dentist 2 */}
           <div className="flex flex-col items-center text-center rounded-lg shadow-sm bg-white p-6 hover:shadow-xl transition duration-300 animate-fadeIn animation-delay-600 dark:bg-gray-700 dark:hover:shadow-xl">
@@ -341,9 +341,9 @@ export default function Home() {
             <p className="text-foreground/70 dark:text-gray-300 text-sm">
               &apos;Passionate about preventative care and patient education.&apos;
             </p>
-            <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
+            <Link href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               View Profile
-            </a>
+            </Link>
           </div>
           {/* Dentist 3 */}
           <div className="flex flex-col items-center text-center rounded-lg shadow-sm bg-white p-6 hover:shadow-xl transition duration-300 animate-fadeIn animation-delay-800 dark:bg-gray-700 dark:hover:shadow-xl">
@@ -365,9 +365,9 @@ export default function Home() {
             <p className="text-foreground/70 dark:text-gray-300 text-sm">
               &apos;Crafting perfect smiles with personalized orthodontic solutions.&apos;
             </p>
-            <a href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
+            <Link href="/dentist" className="mt-4 px-4 py-2 border-2 border-primary text-primary hover:bg-primary hover:text-white dark:border-secondary-dark dark:text-secondary-dark dark:hover:bg-secondary-dark dark:hover:text-white rounded-lg text-sm font-semibold transition duration-300">
               View Profile
-            </a>
+            </Link>
           </div>
         </div>
       </section>

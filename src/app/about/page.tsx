@@ -1,5 +1,6 @@
 // app/about/page.tsx
 
+import Link from 'next/link';
 import React from 'react';
 
 /**
@@ -181,12 +182,12 @@ const AboutPage: React.FC = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href='/appointment' className="bg-primary hover:bg-primary/90 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
+                <Link href='/appointment' className="bg-primary hover:bg-primary/90 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
                   Schedule Appointment
-                </a>
-                <a href='/contact' className="bg-transparent hover:bg-secondary/10 text-secondary border-2 border-secondary font-semibold py-4 px-8 rounded-xl hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+                </Link>
+                <Link href='/contact' className="bg-transparent hover:bg-secondary/10 text-secondary border-2 border-secondary font-semibold py-4 px-8 rounded-xl hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
                   Contact Us
-                </a>
+                </Link>
               </div>
             </div>
           </section>

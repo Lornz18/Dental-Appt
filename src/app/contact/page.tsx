@@ -2,6 +2,7 @@
 
 'use client';
 
+import Link from 'next/link';
 import React, { useState, useEffect, FormEvent } from 'react';
 
 // --- Helper Function to Format Time ---
@@ -190,9 +191,9 @@ const ContactPage: React.FC = () => {
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-2">Call Us</h3>
               <p className="text-muted-foreground mb-4">Speak with our friendly staff</p>
-              <a href="tel:+1234567890" className="text-primary hover:text-primary/80 font-semibold text-lg transition-colors duration-200">
+              <Link href="tel:+1234567890" className="text-primary hover:text-primary/80 font-semibold text-lg transition-colors duration-200">
                 +1 (234) 567-890 {/* Placeholder phone */}
-              </a>
+              </Link>
             </div>
 
             {/* Email Card */}
@@ -204,9 +205,9 @@ const ContactPage: React.FC = () => {
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-2">Email Us</h3>
               <p className="text-muted-foreground mb-4">Send us your questions</p>
-              <a href="mailto:info@yourclinic.com" className="text-secondary hover:text-secondary/80 font-semibold text-lg transition-colors duration-200">
+              <Link href="mailto:info@yourclinic.com" className="text-secondary hover:text-secondary/80 font-semibold text-lg transition-colors duration-200">
                 info@yourclinic.com {/* Placeholder email */}
-              </a>
+              </Link>
             </div>
 
             {/* Location Card */}

@@ -34,35 +34,35 @@ export function Header() {
           <nav className="hidden md:flex"> {/* Hidden on small screens, shown on medium and up */}
             <ul className="flex space-x-8">
               <li>
-                <a
+                <Link
                   href="/about"
                   className="hover:text-primary transition-all duration-300"
                 >
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/dentist"
                   className="hover:text-primary transition-all duration-300"
                 >
                   Dentist
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/service"
                   className="hover:text-primary transition-all duration-300"
                 >
                   Services
-                </a>
+                </Link>
               </li>
             </ul>
           </nav>
 
           {/* Contact Button - Shown on desktop */}
           <div className="hidden md:block"> {/* Hidden on small screens, shown on medium and up */}
-            <a href="/contact" className="btn-primary cursor-pointer">Contact Us</a>
+            <Link href="/contact" className="btn-primary cursor-pointer">Contact Us</Link>
           </div>
 
           {/* Mobile Burger Button */}
@@ -98,40 +98,40 @@ export function Header() {
           <div className="md:hidden absolute top-full left-0 w-full text-white bg-gray-900 dark:bg-gray-800 p-4 shadow-lg z-40">
             <ul className="flex flex-col space-y-4">
               <li>
-                <a
+                <Link
                   href="/about"
                   className="block py-2 hover:text-primary transition-all duration-300"
                   onClick={toggleMobileMenu} // Close menu on link click
                 >
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/dentist"
                   className="block py-2 hover:text-primary transition-all duration-300"
                   onClick={toggleMobileMenu}
                 >
                   Dentist
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/service"
                   className="block py-2 hover:text-primary transition-all duration-300"
                   onClick={toggleMobileMenu}
                 >
                   Services
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/contact"
                   className="block py-2 btn-primary-mobile" // Custom styling for mobile contact
                   onClick={toggleMobileMenu}
                 >
                   Contact Us
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
