@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'; // Import useState
 import Image from "next/image";
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import Link from "next/link";
 
 // Interface for a Service, mirroring your backend model for type safety
 interface Service {
@@ -98,12 +99,12 @@ export default function Home() {
             needs.
           </p>
           <div data-aos="fade-bottom" className="flex justify-center md:justify-start animate-fadeIn animation-delay-400">
-            <a
+            <Link
               href="/appointment"
               className="cursor-pointer bg-primary hover:bg-secondary text-white hover:text-primary dark:hover:text-primary dark:bg-primary-dark dark:hover:bg-secondary-dark font-bold py-4 px-8 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 inline-block"
             >
               Book Your Appointment
-            </a>
+            </Link>
           </div>
         </div>
         <div data-aos="fade-left" className="md:w-1/2 mt-8 md:mt-0 flex justify-center z-10">
@@ -243,7 +244,7 @@ export default function Home() {
               {services.map((service, index) => (
                 <div
                   key={service._id} // Use the unique _id as the key
-                  className="flex items-center bg-white p-5 rounded-lg shadow-sm hover:shadow-xl transition duration-300 animate-fadeIn"
+                  className="flex items-center bg-white p-5 rounded-lg shadow-sm hover:shadow-xl transition duration-300 animate-fadeIn dark:bg-gray-700 "
                   style={{ animationDelay: `${index * 200 + 400}ms` }} // Stagger animation
                   data-aos="fade-up" // Re-apply AOS to dynamically loaded content
                   data-aos-delay={index * 200 + 400}
@@ -456,9 +457,9 @@ export default function Home() {
           consultation today.
         </p>
         <div className="animate-fadeIn animation-delay-400">
-          <a href="/appointment" className="cursor-pointer bg-primary hover:bg-secondary text-white font-bold py-4 px-9 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
+          <Link href="/appointment" className="cursor-pointer bg-primary hover:bg-secondary text-white font-bold py-4 px-9 rounded-lg text-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
             Book Your Appointment Now
-          </a>
+          </Link>
         </div>
       </section>
     </main>

@@ -49,9 +49,6 @@ type Alert = {
   createdAt: string; // Comes as string from JSON
 };
 
-// --- WebSocket URL Configuration ---
-const WS_URL = process.env.WS_URL;
-
 // --- Helper Functions ---
 const formatDateTime = (dateStr: string, timeStr: string): string => {
   try {
@@ -139,6 +136,9 @@ export default function AdminDashboardPage() {
   // WebSocket Connection Management
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // --- WebSocket URL Configuration ---
+    const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
+    console.log("WebSocket URL:", WS_URL);
     if (!WS_URL) {
       setError("WebSocket URL is not configured.");
       return;

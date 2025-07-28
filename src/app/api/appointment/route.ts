@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import WebSocket from "ws"; // Import the 'ws' library to act as a client
 
 const MONGODB_URI = process.env.MONGODB_URI || "your-mongodb-connection-string";
-const WS_URL = process.env.WS_URL;
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
 
 async function connectToDB() {
   if (mongoose.connection.readyState === 0) {
@@ -89,7 +89,6 @@ export async function POST(request: Request) {
     await Alert.create({
       message: `New pending appointment from ${savedAppointment.patientName}.`,
       type: "new-appointment",
-      link: `/admin/dashboard?appointmentId=${savedAppointment._id}`, // Optional: link to the relevant item
     });
     console.log("Alert saved successfully.");
 

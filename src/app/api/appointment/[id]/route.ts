@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import Appointment from "@/app/models/appointment-model"; // Mongoose model
+import Appointment from "@/app/models/appointment-model";
 import mongoose from "mongoose";
 import AppointmentConfirmationEmail from "@/components/emails/AppointmentConfirmationEmail";
 import { Resend } from "resend";
 import React from "react";
+import WebSocket from "ws"; // Import the 'ws' library to act as a client
+import Alert from "@/app/models/alert-model";
 
 const MONGODB_URI = process.env.MONGODB_URI || "your-mongodb-connection-string";
 
 interface Params {
-  params: { id: string } 
+  params: { id: string };
 }
 
 async function connectToDB() {
@@ -18,85 +20,63 @@ async function connectToDB() {
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: Params // Keep `unknown` for robustness, then cast
-) {
+// --- WebSocket Notifier Helper Function ---
+/**
+ * Connects to the WebSocket server as a client, sends a message, and disconnects.
+ * This is a "fire-and-forget" operation from the perspective of the API route.
+ * @param message - The JavaScript object to send as the notification.
+ */
+function notifyWebSocketServer(message: object): void {
+  if (!WS_URL) {
+    console.error("WebSocket URL is not configured.");
+    return;
+  }
+  const ws = new WebSocket(WS_URL);
+
+  ws.on("open", () => {
+    console.log(
+      "API route connected to WebSocket server to send notification."
+    );
+    ws.send(JSON.stringify(message));
+    ws.close(); // Close the connection after sending
+  });
+
+  ws.on("error", (error) => {
+    // Log the error but don't let it fail the HTTP request.
+    // The main operation (saving to DB) was successful.
+    console.error("WebSocket notification error:", error);
+  });
+
+  ws.on("close", () => {
+    console.log("API route disconnected from WebSocket server.");
+  });
+}
+// ✅ GET appointment by ID
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     await connectToDB();
+
     const { id } = params;
-    const body = await request.json();
-    const { status, ...updates } = body;
-    
 
     if (!id) {
       return NextResponse.json(
-        { success: false, error: 'Appointment ID is required' },
+        { success: false, error: "Appointment ID is required" },
         { status: 400 }
       );
     }
 
-    // 2. Find the original appointment BEFORE updating to check its old status
-    const existingAppointment = await Appointment.findById(id);
+    const appointment = await Appointment.findById(id).lean();
 
-    if (!existingAppointment) {
+    if (!appointment) {
       return NextResponse.json(
-        { success: false, error: 'Appointment not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Store the original status
-    const originalStatus = existingAppointment.status;
-
-    // 3. Perform the update
-    const updatedAppointment = await Appointment.findByIdAndUpdate(
-      id,
-      { status, ...updates }, // Apply all updates
-      { new: true } // Return the updated document
-    ).lean(); // Use .lean() for a plain JS object if you don't need Mongoose methods after this
-
-    if (!updatedAppointment) {
-      // This case is largely covered by the check above, but good for safety
-      return NextResponse.json(
-        { success: false, error: 'Appointment not found during update' },
+        { success: false, error: "Appointment not found" },
         { status: 404 }
       );
     }
 
-    // 4. Conditionally send email if status changed to 'confirmed'
-    const newStatus = updatedAppointment.status;
-    if (newStatus === 'confirmed' && originalStatus !== 'confirmed') {
-      try {
-        // Assume your Appointment model has these fields. Adjust as necessary.
-        // The patient's email is essential here.
-        const patientEmail = updatedAppointment.patientEmail;
-        console.log(`Sending confirmation email to: ${patientEmail}`);
-        if (patientEmail) {
-          try {
-            await resend.emails.send({
-              from: 'Your Clinic <onboarding@resend.dev>', // MUST be a verified domain in Resend
-              to: [patientEmail],
-              subject: 'Your Appointment is Confirmed!',
-              react: React.createElement(AppointmentConfirmationEmail, { appointment: updatedAppointment }),
-            });
-            console.log(`Confirmation email sent to ${patientEmail}`);
-          } catch (error) {
-            console.error(`Failed to send confirmation email: ${error}`);
-          }
-        } else {
-            console.warn(`Appointment ${id} confirmed, but no patient email found to send notification.`);
-        }
-      } catch (emailError) {
-        // IMPORTANT: The DB update succeeded, so we don't want to fail the whole request.
-        // We log the error for monitoring and maybe manual follow-up.
-        console.error(`Failed to send confirmation email for appointment ${id}:`, emailError);
-      }
-    }
-
-    return NextResponse.json({ success: true, appointment: updatedAppointment });
-
+    return NextResponse.json({ success: true, appointment });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: (error as Error).message },
@@ -105,15 +85,107 @@ export async function PATCH(
   }
 }
 
-// Correctly typed DELETE method for dynamic route [id]
-export async function DELETE(
-  request: NextRequest,
-  context: { params: { id: string } } // ✅ CORRECT TYPE
-) {
+// ✅ PATCH (update) appointment by ID
+export async function PATCH(request: NextRequest, { params }: Params) {
+  try {
+    await connectToDB();
+    const { id } = params;
+    const body = await request.json();
+    const { status, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Appointment ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const existingAppointment = await Appointment.findById(id);
+
+    if (!existingAppointment) {
+      return NextResponse.json(
+        { success: false, error: "Appointment not found" },
+        { status: 404 }
+      );
+    }
+
+    const originalStatus = existingAppointment.status;
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      id,
+      { status, ...updates },
+      { new: true }
+    ).lean();
+
+    if (!updatedAppointment) {
+      return NextResponse.json(
+        { success: false, error: "Appointment not found during update" },
+        { status: 404 }
+      );
+    }
+
+    const newStatus = updatedAppointment.status;
+    if (newStatus === "confirmed" && originalStatus !== "confirmed") {
+      const patientEmail = updatedAppointment.patientEmail;
+      console.log(`Sending confirmation email to: ${patientEmail}`);
+      if (patientEmail) {
+        try {
+          await resend.emails.send({
+            from: "Your Clinic <onboarding@resend.dev>",
+            to: [patientEmail],
+            subject: "Your Appointment is Confirmed!",
+            react: React.createElement(AppointmentConfirmationEmail, {
+              appointment: {
+                ...updatedAppointment,
+                _id: updatedAppointment._id.toString(),
+              },
+            }),
+          });
+          console.log(`Confirmation email sent to ${patientEmail}`);
+        } catch (error) {
+          console.error(`Failed to send confirmation email: ${error}`);
+        }
+      } else {
+        console.warn(
+          `Appointment ${id} confirmed, but no patient email found to send notification.`
+        );
+      }
+    }
+
+    if (newStatus === "cancelled" && originalStatus !== "cancelled") {
+      console.log("Creating persistent alert in the database...");
+          await Alert.create({
+            message: `Appointment Cancellation from ${updatedAppointment.patientName}.`,
+            type: "cancellation",
+            link: `/appointment/${updatedAppointment._id}`, // Optional: link to the relevant item
+          });
+          console.log("Alert saved successfully.");
+      notifyWebSocketServer({
+        type: "new-alert", // Use a generic signal
+        payload: {
+          message: `Appointment with ID ${id} has been cancelled.`,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      appointment: updatedAppointment,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: (error as Error).message },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ DELETE appointment by ID
+export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     await connectToDB();
 
-    const { id } = context.params;
+    const { id } = params;
 
     if (!id) {
       return NextResponse.json(

@@ -34,7 +34,10 @@ type Appointment = {
   patientName: string;
   email: string;
   appointmentDate: string; // ISO string format, expected to be 'YYYY-MM-DD' for merging with time
-  appointmentTime: string; // Time in HH:MM format
+  // This field's format now depends on what is SENT vs. what is RECEIVED.
+  // For this implementation, we send "h:mm a" but still expect "HH:MM" when fetching existing appointments.
+  // This can be a source of confusion and requires careful backend handling.
+  appointmentTime: string;
   reason?: string; // Stores the selected service NAME
   durationMinutes: number; // Duration of the appointment in minutes
   status: "pending" | "confirmed" | "completed" | "cancelled";
@@ -80,8 +83,8 @@ const formatTo12HourTime = (timeStr: string): string => {
     // Create a date object using a fixed date and the time string
     const date = new Date(`1970-01-01T${timeStr}:00`);
     if (isNaN(date.getTime())) {
-        console.error(`Invalid time string for 12-hour format: ${timeStr}`);
-        return timeStr; // Return original if malformed
+      console.error(`Invalid time string for 12-hour format: ${timeStr}`);
+      return timeStr; // Return original if malformed
     }
     return format(date, "h:mm a");
   } catch (error) {
@@ -136,20 +139,19 @@ const isTimeSlotAvailable = (
   allBookedAppointmentsOnDay: Appointment[],
   currentSelectedDate: Date // Explicitly typed as Date
 ): boolean => {
-  // This function should ideally not receive null clinicOperatingHours if called correctly,
-  // but adding a safeguard is good practice.
   if (!currentSelectedDate || !clinicOperatingHours) {
     return false;
   }
 
   const requestedEndTime = addMinutes(requestedStartTime, durationMinutes);
 
-  // 1. Check against clinic operating hours
-  // Construct clinic start/end times for the specific day
-  const clinicStartMinutes = parseTimeStringToMinutes(clinicOperatingHours.startTime);
-  const clinicEndMinutes = parseTimeStringToMinutes(clinicOperatingHours.endTime);
+  const clinicStartMinutes = parseTimeStringToMinutes(
+    clinicOperatingHours.startTime
+  );
+  const clinicEndMinutes = parseTimeStringToMinutes(
+    clinicOperatingHours.endTime
+  );
 
-  // Ensure we are working with the correct date
   const clinicStartDateTime = setMinutes(
     setSeconds(
       setHours(currentSelectedDate, Math.floor(clinicStartMinutes / 60)),
@@ -166,253 +168,188 @@ const isTimeSlotAvailable = (
     clinicEndMinutes % 60
   );
 
-  // Check if the requested slot is entirely within operating hours
   if (
     isBefore(requestedStartTime, clinicStartDateTime) ||
-    isAfter(requestedEndTime, clinicEndDateTime) // If requestedEndTime is exactly clinicEndDateTime, it's still considered "after" the slot.
+    isAfter(requestedEndTime, clinicEndDateTime)
   ) {
     return false;
   }
 
-  // 2. Check against existing appointments
   for (const bookedApp of allBookedAppointmentsOnDay) {
     let bookedStart: Date | null = null;
     try {
       let datePart = bookedApp.appointmentDate;
       const timePart = bookedApp.appointmentTime;
 
-      // --- Robust Parsing for bookedApp.appointmentDate and appointmentTime ---
-      // Ensure datePart is strictly YYYY-MM-DD.
-      // If bookedApp.appointmentDate is already a valid ISO string, extract the date part.
       const parsedDateFromISO = parseISO(datePart);
       if (isValid(parsedDateFromISO)) {
         datePart = format(parsedDateFromISO, "yyyy-MM-dd");
       } else {
-        // If it's not a valid ISO string, assume it's already YYYY-MM-DD.
-        // Basic validation: check if it matches the expected date format.
         if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-            console.error(`Invalid date format for booking ID ${bookedApp._id}: "${datePart}". Expected YYYY-MM-DD. Skipping.`);
-            continue; // Skip this appointment if date format is wrong
+          console.error(`Invalid date format for booking ID ${bookedApp._id}: "${datePart}". Expected YYYY-MM-DD. Skipping.`);
+          continue;
         }
       }
-
-      // Ensure timePart is in HH:MM format.
+      
+      // IMPORTANT: This logic assumes the fetched `appointmentTime` is in "HH:MM" format.
+      // If your API now returns "h:mm a", this part will FAIL.
+      // You would need to parse the AM/PM time back to 24-hour format here.
       if (!timePart || !/^\d{2}:\d{2}$/.test(timePart)) {
-          console.error(`Invalid time format for booking ID ${bookedApp._id}: "${timePart}". Expected HH:MM. Skipping.`);
-          continue; // Skip this appointment if time format is wrong
+        console.error(`Invalid time format for booking ID ${bookedApp._id}: "${timePart}". Expected HH:MM. Skipping.`);
+        continue;
       }
-      // --- End Robust Parsing ---
 
-      // Construct the full date-time string for parsing
       const appointmentDateTimeString = `${datePart}T${timePart}:00`;
       bookedStart = parseISO(appointmentDateTimeString);
 
-      // Final check for valid Date object
       if (!bookedStart || isNaN(bookedStart.getTime())) {
-        console.error(`Failed to parse final booked appointment start time: "${appointmentDateTimeString}" (Original Date: "${bookedApp.appointmentDate}", Original Time: "${bookedApp.appointmentTime}"). Skipping.`);
-        continue; // Skip to the next booked appointment if parsing fails
+        console.error(`Failed to parse final booked appointment start time: "${appointmentDateTimeString}". Skipping.`);
+        continue;
       }
     } catch (error) {
-      console.error(
-        `Exception during parsing for booking ID ${bookedApp._id}:`,
-        error,
-        `Original Date: "${bookedApp.appointmentDate}", Original Time: "${bookedApp.appointmentTime}"`
-      );
-      continue; // Skip this appointment if any exception occurs
+      console.error(`Exception during parsing for booking ID ${bookedApp._id}:`, error);
+      continue;
     }
 
-    // If parsing was successful
-    const bookedDuration = bookedApp.durationMinutes || 30; // Default to 30 if missing
+    const bookedDuration = bookedApp.durationMinutes || 30;
     const bookedEnd = addMinutes(bookedStart, bookedDuration);
 
-    // Use areIntervalsOverlapping for robust overlap checking
     if (
       areIntervalsOverlapping(
         { start: requestedStartTime, end: requestedEndTime },
         { start: bookedStart, end: bookedEnd }
       )
     ) {
-      return false; // Overlap detected
+      return false;
     }
   }
 
-  return true; // No conflicts found
+  return true;
 };
 
 // --- Component ---
 export default function Appointment() {
-  // State for the form inputs
   const [form, setForm] = useState({
     patientName: "",
     patientEmail: "",
     appointmentDate: "",
-    appointmentTime: "", // Stores time in HH:MM format
-    service: "", // Stores the NAME of the selected service
-    // durationMinutes is now managed by selectedServiceDetails
+    appointmentTime: "",
+    service: "",
   });
 
-  // State for loading status
   const [loading, setLoading] = useState(false);
-  // State to store fetched booked appointments
   const [bookedAppointments, setBookedAppointments] = useState<Appointment[]>(
     []
   );
-  // State for clinic settings
   const [clinicSettings, setClinicSettings] = useState<ClinicSettings | null>(
     null
-  ); // Initialize as null
+  );
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
-  // State for available services
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [servicesError, setServicesError] = useState<string | null>(null);
 
-  // State to store details of the selected service (for price and duration display)
   const [selectedServiceDetails, setSelectedServiceDetails] = useState<{
     name: string;
     price: number;
     durationMinutes: number;
   } | null>(null);
 
-  // State to track the currently selected date on the calendar
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  // State to store the available time slots for the selected date based on clinic hours and bookings
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
-  // Fetch initial data when the component mounts
   const fetchInitialData = useCallback(async () => {
-    // Fetch Appointments
     try {
       const resApp = await fetch("/api/appointment", { method: "GET" });
       if (!resApp.ok) {
-        // Log specific error and provide a fallback
-        const errorText = await resApp.text();
-        console.error(`HTTP error fetching appointments! Status: ${resApp.status}, Body: ${errorText}`);
         throw new Error(`Failed to fetch appointments (Status: ${resApp.status})`);
       }
       const dataApp = await resApp.json();
-      // Ensure dataApp.appointments is an array before setting
       setBookedAppointments(Array.isArray(dataApp.appointments) ? dataApp.appointments : []);
-    } catch (error) { // Catching 'any' to easily access error.message
+    } catch (error) {
       console.error("Error fetching appointments:", error);
-      setBookedAppointments([]); // Ensure it's an empty array on error
+      setBookedAppointments([]);
       toast.error(`Could not load existing appointments: ${(error as Error).message}`);
     }
   }, []);
 
-  // Fetch Clinic Settings
   const fetchClinicSettings = useCallback(async () => {
     setSettingsLoading(true);
     setSettingsError(null);
     try {
-      const resSettings = await fetch("/api/clinic-setting");
-      if (!resSettings.ok) {
-        if (resSettings.status === 404) {
-          console.warn("No clinic settings found via API, using defaults.");
-          // Use default settings if none are found
-          setClinicSettings({
+        const resSettings = await fetch("/api/clinic-setting");
+        if (!resSettings.ok) {
+            if (resSettings.status === 404) {
+                console.warn("No clinic settings found via API, using defaults.");
+                setClinicSettings({
+                    regularHours: { startTime: "09:00", endTime: "17:00" },
+                    saturdayHours: { startTime: "09:00", endTime: "13:00" },
+                    sundayHours: null,
+                    customHours: [],
+                    recurringClosures: [],
+                    isOpen: true,
+                });
+            } else {
+                const errorData = await resSettings.json();
+                throw new Error(errorData.message || `Failed to fetch settings (Status: ${resSettings.status})`);
+            }
+        } else {
+            const dataSettings = await resSettings.json();
+            if (dataSettings && dataSettings.settings) {
+                setClinicSettings(dataSettings.settings);
+            } else {
+                throw new Error("Invalid data format received from settings API.");
+            }
+        }
+    } catch (err) {
+        console.error("Error fetching clinic settings:", err);
+        setSettingsError((err as Error).message || "An unknown error occurred.");
+        setClinicSettings({
             regularHours: { startTime: "09:00", endTime: "17:00" },
             saturdayHours: { startTime: "09:00", endTime: "13:00" },
             sundayHours: null,
             customHours: [],
             recurringClosures: [],
             isOpen: true,
-          });
-        } else {
-          const errorData = await resSettings.json();
-          throw new Error(
-            errorData.message ||
-              `Failed to fetch settings (Status: ${resSettings.status})`
-          );
-        }
-      } else {
-        const dataSettings = await resSettings.json();
-        if (dataSettings && dataSettings.settings) {
-          // Basic validation of essential fields
-          if (
-            dataSettings.settings.regularHours &&
-            dataSettings.settings.regularHours.startTime &&
-            dataSettings.settings.regularHours.endTime
-          ) {
-            setClinicSettings(dataSettings.settings);
-          } else {
-            console.error("Fetched settings are incomplete, reverting to defaults.");
-            toast.error("Incomplete clinic settings received from server. Using defaults.");
-            setClinicSettings({
-              regularHours: { startTime: "09:00", endTime: "17:00" },
-              saturdayHours: { startTime: "09:00", endTime: "13:00" },
-              sundayHours: null,
-              customHours: [],
-              recurringClosures: [],
-              isOpen: true,
-            });
-            setSettingsError("Incomplete settings received from server.");
-          }
-        } else {
-          throw new Error("Invalid data format received from settings API.");
-        }
-      }
-    } catch (err) { // Catching 'any' to easily access error.message
-      console.error("Error fetching clinic settings:", err);
-      setSettingsError((err as Error).message || "An unknown error occurred.");
-      // Fallback to defaults on error
-      setClinicSettings({
-        regularHours: { startTime: "09:00", endTime: "17:00" },
-        saturdayHours: { startTime: "09:00", endTime: "13:00" },
-        sundayHours: null,
-        customHours: [],
-        recurringClosures: [],
-        isOpen: true,
-      });
-      toast.error(`Could not load clinic settings: ${(err as Error).message}`);
+        });
+        toast.error(`Could not load clinic settings: ${(err as Error).message}`);
     } finally {
-      setSettingsLoading(false);
+        setSettingsLoading(false);
     }
   }, []);
 
-  // Fetch Services
   const fetchServices = useCallback(async () => {
     setServicesLoading(true);
     setServicesError(null);
     try {
-      const res = await fetch("/api/services"); // Assuming your services API endpoint
+      const res = await fetch("/api/services");
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(
-          errorData.message || `Failed to fetch services (Status: ${res.status})`
-        );
+        throw new Error(errorData.message || `Failed to fetch services (Status: ${res.status})`);
       }
       const data = await res.json();
-      if (data && Array.isArray(data.data)) {
-        setAvailableServices(data.data);
-      } else {
-        throw new Error("Invalid data format received from services API.");
-      }
-    } catch (err) { // Catching 'any' to easily access error.message
+      setAvailableServices(data.data || []);
+    } catch (err) {
       console.error("Error fetching services:", err);
       setServicesError((err as Error).message || "An unknown error occurred.");
-      setAvailableServices([]); // Ensure empty array on error
+      setAvailableServices([]);
       toast.error(`Could not load services: ${(err as Error).message}`);
     } finally {
       setServicesLoading(false);
     }
   }, []);
 
-  // Combine initial data fetching
   useEffect(() => {
     fetchInitialData();
-    fetchClinicSettings(); // Fetch settings separately
-    fetchServices(); // Fetch services
+    fetchClinicSettings();
+    fetchServices();
   }, [fetchInitialData, fetchClinicSettings, fetchServices]);
 
-  // Update the available time slots when selectedDate, clinicSettings, bookedAppointments, or selectedServiceDetails changes
   useEffect(() => {
-    // Ensure we have all necessary data to proceed
     if (!selectedDate || !clinicSettings || !selectedServiceDetails) {
-      setAvailableTimes([]); // Clear available times if any dependency is missing
-      // Reset form date and time if date is cleared
+      setAvailableTimes([]);
       if (!selectedDate) {
         setForm((f) => ({ ...f, appointmentDate: "", appointmentTime: "" }));
       }
@@ -421,127 +358,61 @@ export default function Appointment() {
 
     const { durationMinutes } = selectedServiceDetails;
     const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+    const operatingHours = getOperatingHoursForDate(selectedDate, clinicSettings);
 
-    const operatingHours = getOperatingHoursForDate(
-      selectedDate,
-      clinicSettings! // Non-null assertion because we check !clinicSettings above
-    );
-
-    // If the clinic is closed on this day, clear available times and reset form
     if (!operatingHours) {
       setAvailableTimes([]);
       setForm((f) => ({ ...f, appointmentDate: "", appointmentTime: "" }));
       return;
     }
 
-    // Generate potential start times within operating hours
     const possibleStartTimes: Date[] = [];
     const startMinutes = parseTimeStringToMinutes(operatingHours.startTime);
     const endMinutes = parseTimeStringToMinutes(operatingHours.endTime);
-
-    // Iterate in 30-minute increments to find potential slots (hourly and half-hourly).
     const iterationStepMinutes = 30;
-    for (
-      let currentMinutes = startMinutes;
-      currentMinutes < endMinutes; // Loop until the start time reaches the end time
-      currentMinutes += iterationStepMinutes
-    ) {
-      const potentialStartTime = setMinutes(
-        setSeconds(
-          setHours(
-            selectedDate, // Use selectedDate directly
-            Math.floor(currentMinutes / 60)
-          ),
-          0 // Seconds
-        ),
-        currentMinutes % 60 // Minutes
-      );
 
-      // Check if the full duration fits within the clinic's operating hours
+    for (let currentMinutes = startMinutes; currentMinutes < endMinutes; currentMinutes += iterationStepMinutes) {
+      const potentialStartTime = setMinutes(setSeconds(setHours(selectedDate, Math.floor(currentMinutes / 60)), 0), currentMinutes % 60);
       const potentialEndTime = addMinutes(potentialStartTime, durationMinutes);
-
-      // Construct the clinic's actual end time for the selected date to compare against
-      const clinicEndHour = Math.floor(endMinutes / 60);
-      const clinicEndMinute = endMinutes % 60;
-
-      const actualClinicEndTime = setMinutes(
-        setSeconds(
-          setHours(selectedDate, clinicEndHour),
-          0
-        ),
-        clinicEndMinute
-      );
-
-      // --- MODIFIED CONDITION ---
-      // The previous condition `isBefore(potentialEndTime, actualClinicEndTime)`
-      // excluded slots where the appointment ENDED exactly at closing time.
-      // This new condition `!isAfter(potentialEndTime, actualClinicEndTime)`
-      // allows slots where the appointment ENDS AT or BEFORE the closing time.
+      const actualClinicEndTime = setMinutes(setSeconds(setHours(selectedDate, Math.floor(endMinutes / 60)), 0), endMinutes % 60);
       if (!isAfter(potentialEndTime, actualClinicEndTime)) {
         possibleStartTimes.push(potentialStartTime);
       }
     }
 
-    // Filter these possible start times based on existing bookings
     const availableSlotStrings: string[] = [];
-    // Filter appointments for the selected date and exclude cancelled ones
     const bookedAppointmentsOnSelectedDate = bookedAppointments.filter(
-      (a) =>
-        a.appointmentDate.startsWith(selectedDateStr) && a.status !== "cancelled"
+      (a) => a.appointmentDate.startsWith(selectedDateStr) && a.status !== "cancelled"
     );
 
     for (const startTime of possibleStartTimes) {
-      // Check if this exact start time is available considering the duration and other appointments
-      if (
-        isTimeSlotAvailable(
-          startTime,
-          durationMinutes,
-          operatingHours,
-          bookedAppointmentsOnSelectedDate,
-          selectedDate // Pass selectedDate to the helper
-        )
-      ) {
+      if (isTimeSlotAvailable(startTime, durationMinutes, operatingHours, bookedAppointmentsOnSelectedDate, selectedDate)) {
         availableSlotStrings.push(format(startTime, "HH:mm"));
       }
     }
 
     setAvailableTimes(availableSlotStrings);
-    // Update the form with the selected date and reset the time
     setForm((f) => ({
       ...f,
       appointmentDate: selectedDateStr,
-      appointmentTime: "", // Reset time when date or service changes
+      appointmentTime: "",
     }));
-  }, [
-    selectedDate,
-    clinicSettings,
-    bookedAppointments,
-    selectedServiceDetails,
-  ]);
+  }, [selectedDate, clinicSettings, bookedAppointments, selectedServiceDetails]);
 
-  // Handle input changes for form fields (excluding service)
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement> // Added textarea for potential future use
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setForm((prevForm) => ({ ...prevForm, [id]: value }));
   };
 
-  // Handle service selection change
   const handleServiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedServiceName = e.target.value;
-    // Reset time and date when service changes, as duration might change
     setForm((prevForm) => ({
       ...prevForm,
       service: selectedServiceName,
-      appointmentDate: "", // Clear date
-      appointmentTime: "", // Clear time
+      appointmentDate: "",
+      appointmentTime: "",
     }));
-
-    // Find the details of the selected service
-    const service = availableServices.find(
-      (svc) => svc.name === selectedServiceName
-    );
+    const service = availableServices.find((svc) => svc.name === selectedServiceName);
     if (service) {
       setSelectedServiceDetails({
         name: service.name,
@@ -549,39 +420,40 @@ export default function Appointment() {
         durationMinutes: service.durationMinutes,
       });
     } else {
-      setSelectedServiceDetails(null); // Clear if no service is selected or found
+      setSelectedServiceDetails(null);
     }
   };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic validation: ensure all required fields are filled
     if (
       !form.patientName ||
       !form.patientEmail ||
       !form.appointmentDate ||
       !form.appointmentTime ||
       !form.service ||
-      !selectedServiceDetails // Ensure a service with price and duration is selected
+      !selectedServiceDetails
     ) {
-      toast.error(
-        "Please fill in all required fields and select a date, time, and service."
-      );
+      toast.error("Please fill in all required fields and select a date, time, and service.");
       return;
     }
 
     setLoading(true);
     try {
-      // Prepare the data to be sent
+      // --- MODIFICATION START ---
+      const fullAppointmentDate = parseISO(`${form.appointmentDate}T${form.appointmentTime}`);
+      const timeWithAmPm = format(fullAppointmentDate, "h:mm a");
+
       const appointmentData = {
         patientName: form.patientName,
         patientEmail: form.patientEmail,
         appointmentDate: form.appointmentDate,
-        appointmentTime: form.appointmentTime, // Still stores HH:MM internally for backend
-        reason: form.service, // Use the selected service's NAME as the reason
-        durationMinutes: selectedServiceDetails.durationMinutes, // Save the duration
+        appointmentTime: timeWithAmPm, // Sending time in "h:mm a" format
+        reason: form.service,
+        durationMinutes: selectedServiceDetails.durationMinutes,
       };
+      // --- MODIFICATION END ---
 
       const response = await fetch("/api/appointment", {
         method: "POST",
@@ -591,13 +463,10 @@ export default function Appointment() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       toast.success("Appointment booked successfully!");
-      // Reset the form and clear selections
       setForm({
         patientName: "",
         patientEmail: "",
@@ -607,11 +476,10 @@ export default function Appointment() {
       });
       setSelectedDate(null);
       setAvailableTimes([]);
-      setSelectedServiceDetails(null); // Clear selected service details
+      setSelectedServiceDetails(null);
 
-      // Re-fetch appointments to show the newly booked one
-      fetchInitialData(); // Re-use the function to fetch appointments
-    } catch (error) { // Catching 'any' to easily access error.message
+      fetchInitialData();
+    } catch (error) {
       console.error("Error submitting appointment:", error);
       toast.error(`Failed to book appointment: ${(error as Error).message}`);
     } finally {
@@ -619,37 +487,25 @@ export default function Appointment() {
     }
   };
 
-  // Determine which dates should be marked on the calendar
-  const tileClassName = ({
-    date,
-    view,
-  }: {
-    date: Date;
-    view: string;
-  }): string | null => {
+  const tileClassName = ({ date, view }: { date: Date; view: string }): string | null => {
     if (view === "month" && clinicSettings) {
       const operatingHours = getOperatingHoursForDate(date, clinicSettings);
       const formattedDate = format(date, "yyyy-MM-dd");
-
-      // Check if the date is specifically closed (null hours)
       if (operatingHours === null) {
-        return "react-calendar__tile--closed"; // Custom class for closed days
+        return "react-calendar__tile--closed";
       }
-
-      // Check if the date has any bookings
       const hasBookings = bookedAppointments.some(
-        (a) =>
-          a.appointmentDate.startsWith(formattedDate) &&
-          a.status !== "cancelled"
+        (a) => a.appointmentDate.startsWith(formattedDate) && a.status !== "cancelled"
       );
       if (hasBookings) {
-        return "react-calendar__tile--hasBookings"; // Custom class for days with bookings
+        return "react-calendar__tile--hasBookings";
       }
     }
     return null;
   };
-
-  // Custom styling for react-calendar to integrate better with Tailwind
+  
+  // (The rest of the component, including the JSX and styles, remains exactly the same)
+  // ...
   const calendarStyles = `
         /* Base styles */
         .react-calendar {
@@ -765,7 +621,7 @@ export default function Appointment() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <style>{calendarStyles}</style> {/* Inject custom styles */}
+      <style>{calendarStyles}</style>
       <div className="container">
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden p-6 sm:p-8">
           <h2 className="text-3xl font-extrabold text-center mb-8 text-gray-900">
@@ -774,15 +630,12 @@ export default function Appointment() {
 
           {settingsLoading || servicesLoading ? (
             <div className="flex justify-center items-center h-64">
-              <p className="text-lg text-gray-600">
-                Loading clinic information...
-              </p>
+              <p className="text-lg text-gray-600">Loading clinic information...</p>
             </div>
           ) : settingsError || servicesError ? (
             <div className="flex justify-center items-center h-64 bg-red-50 border border-red-200 text-red-600 rounded-lg p-4">
               <p className="text-lg text-center">
-                <span className="font-bold">Error loading information:</span>{" "}
-                {settingsError || servicesError}
+                <span className="font-bold">Error loading information:</span> {settingsError || servicesError}
                 <br />
                 Please try again later or contact support.
               </p>
@@ -795,33 +648,24 @@ export default function Appointment() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Calendar Section */}
               <div className="flex flex-col items-center">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Select a Date
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Select a Date</h3>
                 <Calendar
                   value={selectedDate}
                   onChange={(value) => {
                     if (value instanceof Date && isValid(value)) {
                       setSelectedDate(value);
                     } else {
-                      // If the user deselects or invalid date, clear state
                       setSelectedDate(null);
-                      setForm((f) => ({
-                        ...f,
-                        appointmentDate: "",
-                        appointmentTime: "",
-                      }));
+                      setForm((f) => ({ ...f, appointmentDate: "", appointmentTime: "" }));
                       setAvailableTimes([]);
-                      // Also clear service selection to force re-selection if date is cleared
                       setForm((f) => ({ ...f, service: "" }));
                       setSelectedServiceDetails(null);
                     }
                   }}
                   tileClassName={tileClassName}
-                  minDate={new Date()} // Disable past dates
-                  className="custom-react-calendar" // Apply custom class for styling
+                  minDate={new Date()}
+                  className="custom-react-calendar"
                 />
                 {selectedDate && (
                   <p className="mt-4 text-sm text-center text-gray-600">
@@ -833,15 +677,9 @@ export default function Appointment() {
                 )}
               </div>
 
-              {/* Appointment Form Section */}
               <form className="space-y-6" onSubmit={handleSubmit}>
                 <div>
-                  <label
-                    htmlFor="patientName"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Full Name
-                  </label>
+                  <label htmlFor="patientName" className="block text-sm font-medium text-gray-700">Full Name</label>
                   <input
                     type="text"
                     id="patientName"
@@ -853,12 +691,7 @@ export default function Appointment() {
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Email Address
-                  </label>
+                  <label htmlFor="patientEmail" className="block text-sm font-medium text-gray-700">Email Address</label>
                   <input
                     type="email"
                     id="patientEmail"
@@ -869,15 +702,8 @@ export default function Appointment() {
                     required
                   />
                 </div>
-
-                {/* Service Selection */}
                 <div>
-                  <label
-                    htmlFor="service"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Select Service
-                  </label>
+                  <label htmlFor="service" className="block text-sm font-medium text-gray-700">Select Service</label>
                   <select
                     id="service"
                     value={form.service}
@@ -885,89 +711,61 @@ export default function Appointment() {
                     className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
                     required
                   >
-                    <option value="" disabled hidden>
-                      -- Please select a service --
-                    </option>
+                    <option value="" disabled hidden>-- Please select a service --</option>
                     {availableServices.map((service) => (
-                      <option key={service._id} value={service.name}>
-                        {service.name}
-                      </option>
+                      <option key={service._id} value={service.name}>{service.name}</option>
                     ))}
                   </select>
                 </div>
-
-                {/* Display Price and Duration if a service is selected */}
                 {selectedServiceDetails && (
-                  <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-700 p-3 rounded-md shadow-sm mb-6">
-                    <p className="text-sm font-medium">
-                      Selected Service: {selectedServiceDetails.name}
-                    </p>
-                    <p className="text-sm font-semibold mt-1">
-                      Price: ${selectedServiceDetails.price.toFixed(2)}
-                    </p>
-                    <p className="text-sm font-medium mt-1">
-                      Duration: {selectedServiceDetails.durationMinutes} minutes
+                  <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-700 p-3 rounded-md shadow-sm">
+                    <p className="text-sm font-medium">Selected Service: {selectedServiceDetails.name}</p>
+                    <p className="text-sm font-semibold mt-1">Price: ${selectedServiceDetails.price.toFixed(2)}</p>
+                    <p className="text-sm font-medium mt-1">Duration: {selectedServiceDetails.durationMinutes} minutes</p>
+                  </div>
+                )}
+                {selectedDate && form.service && selectedServiceDetails && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Choose a Time Slot</label>
+                    {availableTimes.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {availableTimes.map((time) => (
+                          <button
+                            type="button"
+                            key={time}
+                            onClick={() => setForm((f) => ({ ...f, appointmentTime: time }))}
+                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                              form.appointmentTime === time
+                                ? "bg-blue-600 text-white shadow-md"
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                            }`}
+                          >
+                            {formatTo12HourTime(time)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-center text-gray-500 italic p-4 border border-dashed rounded-md">
+                        No available time slots for this date and selected service duration. Please select another date or service.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {form.appointmentDate && form.appointmentTime && (
+                  <div className="bg-green-50 border-l-4 border-green-500 text-green-800 p-4 rounded-md shadow-sm transition-all duration-300 ease-in-out">
+                    <p className="font-semibold text-sm">Your Selection:</p>
+                    <p className="font-bold text-base mt-1">
+                      {format(
+                        parseISO(`${form.appointmentDate}T${form.appointmentTime}`),
+                        "eeee, MMMM do, yyyy 'at' h:mm a"
+                      )}
                     </p>
                   </div>
                 )}
-
-                {/* Time Slot Selection */}
-                {selectedDate &&
-                  form.service &&
-                  selectedServiceDetails && ( // Only show time slots if date, service, and details are selected
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Choose a Time Slot
-                      </label>
-                      {availableTimes.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {availableTimes.map((time) => (
-                            <button
-                              type="button"
-                              key={time}
-                              onClick={() =>
-                                setForm((f) => ({
-                                  ...f,
-                                  appointmentTime: time,
-                                }))
-                              }
-                              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200
-                                                    ${
-                                                      form.appointmentTime ===
-                                                      time
-                                                        ? "bg-blue-600 text-white shadow-md"
-                                                        : "bg-gray-100 text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                                                    }`}
-                            >
-                              {formatTo12HourTime(time)}{" "}
-                              {/* Display time in 12-hour format */}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-center text-gray-500 italic p-4 border border-dashed rounded-md">
-                          No available time slots for this date and selected
-                          service duration. Please select another date or
-                          service.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
                 <button
                   type="submit"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-                                       bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-                                       disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  disabled={
-                    loading ||
-                    !form.patientName ||
-                    !form.patientEmail ||
-                    !form.appointmentDate ||
-                    !form.appointmentTime ||
-                    !form.service ||
-                    !selectedServiceDetails // Ensure service is selected before enabling submit
-                  }
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  disabled={loading || !form.patientName || !form.patientEmail || !form.appointmentDate || !form.appointmentTime || !form.service || !selectedServiceDetails}
                 >
                   {loading ? "Booking..." : "Confirm Appointment"}
                 </button>

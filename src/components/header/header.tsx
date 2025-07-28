@@ -10,7 +10,7 @@ export function Header() {
   };
 
   return (
-    <header className="p-4 text-black dark:bg-gray-900 dark:text-white sticky top-0 z-50 shadow-md">
+    <header className="p-4 text-black bg-white dark:bg-gray-900 dark:text-white sticky top-0 z-50 shadow-md">
       <div className="container mx-auto"> {/* Added mx-auto for centering */}
         <div className="flex items-center justify-between">
           {/* Left side: Logo */}
