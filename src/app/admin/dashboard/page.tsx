@@ -1,33 +1,35 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import "react-calendar/dist/Calendar.css"; // Imported, but not used in AdminDashboardPage
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import "react-calendar/dist/Calendar.css";
 import {
   format,
   parseISO,
   isToday,
   isTomorrow,
   isValid,
-  addDays, // Needed for calculating end of week
-  startOfWeek, // Needed for calculating start of week
-  isWithinInterval, // Useful for checking if a date is within the week
+  addDays,
+  startOfWeek,
+  isWithinInterval,
+  formatDistanceToNow,
 } from "date-fns";
 import {
   Trash2,
   RefreshCw,
-  Calendar as CalendarIcon, // Renamed to avoid conflict with react-calendar
+  Calendar as CalendarIcon,
   User,
   Clock,
   Filter,
   LogOut,
   BarChart3,
   Settings,
+  Bell,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// --- Types ---
+// --- Types (Aligning with Backend Models) ---
 type Appointment = {
   _id: string;
   patientName: string;
@@ -38,15 +40,27 @@ type Appointment = {
   status: "pending" | "confirmed" | "completed" | "cancelled";
 };
 
+type Alert = {
+  _id: string;
+  message: string;
+  type: string;
+  read: boolean;
+  link?: string;
+  createdAt: string; // Comes as string from JSON
+};
+
+// --- WebSocket URL Configuration ---
+const WS_URL = process.env.WS_URL;
+
 // --- Helper Functions ---
 const formatDateTime = (dateStr: string, timeStr: string): string => {
   try {
     if (!dateStr || !timeStr) return "Invalid Date/Time";
     const date = parseISO(dateStr);
-    if (isNaN(date.getTime())) return `${dateStr} ${timeStr}`; // Fallback for invalid ISO
+    if (isNaN(date.getTime())) return `${dateStr} ${timeStr}`;
     return `${format(date, "MMM d, yyyy")} at ${timeStr}`;
   } catch {
-    return `${dateStr} ${timeStr}`; // Fallback for any parsing errors
+    return `${dateStr} ${timeStr}`;
   }
 };
 
@@ -56,50 +70,128 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [notifications, setNotifications] = useState<Alert[]>([]);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const ws = useRef<WebSocket | null>(null);
+  const notificationPanelRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
 
   // --- Authentication Check ---
   useEffect(() => {
     const isAdmin = localStorage.getItem("isAdmin");
-    if (isAdmin !== "true") {
-      router.replace("/admin");
-    }
+    if (isAdmin !== "true") router.replace("/admin");
   }, [router]);
 
-  // --- Fetch Appointments ---
-  const fetchAppointments = useCallback(async () => {
-    setLoading(true);
+  // --- Data Fetching Logic ---
+  const fetchAppointments = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/appointment");
-      if (!res.ok) {
-        const errorData = await res.json();
+      if (!res.ok)
         throw new Error(
-          errorData.message ||
-            `Failed to fetch appointments (Status: ${res.status})`
+          (await res.json()).message || "Failed to fetch appointments"
         );
-      }
       const data = await res.json();
       setAppointments(data.appointments || []);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred while fetching appointments.");
-      }
-      setAppointments([]); // Clear appointments on error
+    } catch (err) {
+      setError((err as Error).message);
+      toast.error((err as Error).message);
+      setAppointments([]);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, []);
 
-  // Fetch initial data when the component mounts
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/alerts?read=false");
+      if (!res.ok) throw new Error("Failed to fetch notifications");
+      const data = await res.json();
+      setNotifications(data.alerts || []);
+    } catch (err) {
+      console.error("Error fetching alerts:", err);
+    }
+  }, []);
+
+  const markAlertsAsRead = useCallback(async () => {
+    const unreadIds = notifications.filter((n) => !n.read).map((n) => n._id);
+    if (unreadIds.length === 0) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await fetch("/api/alerts/mark-as-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: unreadIds }),
+      });
+    } catch (err) {
+      console.error("Failed to mark alerts as read:", err);
+    }
+  }, [notifications]);
+
+  // Initial Data Load
   useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]);
+    fetchAlerts();
+  }, [fetchAppointments, fetchAlerts]);
 
-  // --- Appointment Handlers ---
+  // WebSocket Connection Management
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!WS_URL) {
+      setError("WebSocket URL is not configured.");
+      return;
+    }
+    const socket = new WebSocket(WS_URL);
+    ws.current = socket;
+    socket.onopen = () => {
+      console.log("WebSocket connection established.");
+      toast.success("Real-time connection active", { icon: "⚡" });
+    };
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "new-alert") {
+          toast.success(
+            message.payload.message || "You have a new notification!",
+            { icon: "🔔" }
+          );
+          fetchAlerts();
+          fetchAppointments(true);
+        }
+      } catch (err) {
+        console.error("Failed to parse WebSocket message:", event.data, err);
+      }
+    };
+    socket.onclose = () => {
+      toast.error("Real-time connection lost. Please refresh.", {
+        duration: 6000,
+      });
+    };
+    socket.onerror = () => {
+      setError("WebSocket connection failed. Real-time updates are disabled.");
+    };
+    return () => {
+      if (ws.current) ws.current.close();
+    };
+  }, [fetchAppointments, fetchAlerts]);
+
+  // Outside Click for Notification Panel
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        notificationPanelRef.current &&
+        !notificationPanelRef.current.contains(event.target as Node)
+      ) {
+        setIsPanelOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // --- Component Handlers ---
   const handleStatusUpdate = async (
     id: string,
     newStatus: Appointment["status"]
@@ -163,8 +255,13 @@ export default function AdminDashboardPage() {
     toast.success("Logged out successfully");
     router.push("/admin");
   };
+  const handleBellClick = () => {
+    setIsPanelOpen((prev) => !prev);
+    if (!isPanelOpen) markAlertsAsRead();
+  };
 
-  // --- Utility Functions for Styling ---
+  // --- Data Processing & Utility ---
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const getStatusClasses = (status: Appointment["status"]) => {
     switch (status) {
       case "confirmed":
@@ -179,7 +276,6 @@ export default function AdminDashboardPage() {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
-
   const getStatusIcon = (status: Appointment["status"]) => {
     switch (status) {
       case "confirmed":
@@ -194,44 +290,29 @@ export default function AdminDashboardPage() {
         return "⚪";
     }
   };
-
-  // --- Data Processing for Display ---
   const sortedAppointments = [...appointments].sort((a, b) => {
     const dateA = parseISO(a.appointmentDate);
     const dateB = parseISO(b.appointmentDate);
-    if (!isValid(dateA) && isValid(dateB)) return 1;
-    if (isValid(dateA) && !isValid(dateB)) return -1;
-    if (!isValid(dateA) && !isValid(dateB)) return 0;
-
     if (dateA < dateB) return -1;
     if (dateA > dateB) return 1;
-
-    // If dates are the same, sort by time
-    if (a.appointmentTime < b.appointmentTime) return -1;
-    if (a.appointmentTime > b.appointmentTime) return 1;
-    return 0;
+    return a.appointmentTime.localeCompare(b.appointmentTime);
   });
-
   const filteredAppointments = sortedAppointments.filter(
     (a) => filterStatus === "all" || a.status === filterStatus
   );
-
-  // --- Calculate Weekly Appointments ---
   const today = new Date();
-  const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 0 }); // Assuming Sunday is the start of the week
-  const endOfCurrentWeek = addDays(startOfCurrentWeek, 6); // 6 days after start makes it end of week (Saturday)
-
-  const todayAppointments = sortedAppointments.filter((app) => {
-    const appDate = parseISO(app.appointmentDate);
-    return isValid(appDate) && isToday(appDate);
-  });
-
-  const tomorrowAppointments = sortedAppointments.filter((app) => {
-    const appDate = parseISO(app.appointmentDate);
-    return isValid(appDate) && isTomorrow(appDate);
-  });
-
-  // Filter appointments for the current week (excluding today and tomorrow, which are handled separately)
+  const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 0 });
+  const endOfCurrentWeek = addDays(startOfCurrentWeek, 6);
+  const todayAppointments = sortedAppointments.filter(
+    (app) =>
+      isValid(parseISO(app.appointmentDate)) &&
+      isToday(parseISO(app.appointmentDate))
+  );
+  const tomorrowAppointments = sortedAppointments.filter(
+    (app) =>
+      isValid(parseISO(app.appointmentDate)) &&
+      isTomorrow(parseISO(app.appointmentDate))
+  );
   const thisWeekAppointments = sortedAppointments.filter((app) => {
     const appDate = parseISO(app.appointmentDate);
     return (
@@ -239,49 +320,35 @@ export default function AdminDashboardPage() {
       !isToday(appDate) &&
       !isTomorrow(appDate) &&
       isWithinInterval(appDate, {
-        start: addDays(startOfCurrentWeek, 2), // Start after today and tomorrow
+        start: addDays(today, 1),
         end: endOfCurrentWeek,
       })
     );
   });
-
-  // Group remaining appointments by day of the week
-  const groupedThisWeek = thisWeekAppointments.reduce((acc: Record<string, Appointment[]>, app) => {
-    const appDate = parseISO(app.appointmentDate);
-    if (!isValid(appDate)) return acc;
-
-    const dayOfWeek = format(appDate, 'EEEE'); // e.g., "Wednesday"
-    if (!acc[dayOfWeek]) {
-      acc[dayOfWeek] = [];
-    }
-    acc[dayOfWeek].push(app);
-    return acc;
-  }, {});
-
-  // Function to get the days of the week in order for display
-  const orderedDays = ["Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]; // Assuming Monday-Friday are regular, Saturday/Sunday are special. We've already handled today/tomorrow.
-
-  const getStats = () => {
-    const total = appointments.length;
-    const pending = appointments.filter((a) => a.status === "pending").length;
-    const confirmed = appointments.filter(
-      (a) => a.status === "confirmed"
-    ).length;
-    const completed = appointments.filter(
-      (a) => a.status === "completed"
-    ).length;
-    const cancelled = appointments.filter(
-      (a) => a.status === "cancelled"
-    ).length;
-
-    return { total, pending, confirmed, completed, cancelled };
-  };
-
-  const stats = getStats();
+  const groupedThisWeek = thisWeekAppointments.reduce(
+    (acc: Record<string, Appointment[]>, app) => {
+      const dayOfWeek = format(parseISO(app.appointmentDate), "EEEE");
+      if (!acc[dayOfWeek]) acc[dayOfWeek] = [];
+      acc[dayOfWeek].push(app);
+      return acc;
+    },
+    {}
+  );
+  const orderedDays = ["Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const stats = React.useMemo(
+    () => ({
+      total: appointments.length,
+      pending: appointments.filter((a) => a.status === "pending").length,
+      confirmed: appointments.filter((a) => a.status === "confirmed").length,
+      completed: appointments.filter((a) => a.status === "completed").length,
+      cancelled: appointments.filter((a) => a.status === "cancelled").length,
+    }),
+    [appointments]
+  );
 
   // --- JSX Rendering ---
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-600  to-primary text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-600 to-primary text-white">
       <div className="relative z-10 py-8 px-4 sm:px-6 lg:px-8 container">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -300,6 +367,50 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <div className="relative" ref={notificationPanelRef}>
+                <button
+                  onClick={handleBellClick}
+                  className="relative cursor-pointer flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all duration-200 backdrop-blur-sm"
+                  aria-label={`Notifications (${unreadCount} unread)`}
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-xs items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    </span>
+                  )}
+                </button>
+                {isPanelOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-80 bg-slate-700/80 backdrop-blur-md border border-slate-500 rounded-xl shadow-lg z-50 text-white">
+                    <div className="p-3 border-b border-slate-600">
+                      <h3 className="font-semibold">Notifications</h3>
+                    </div>
+                    <ul className="max-h-96 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        notifications.map((n) => (
+                          <Link key={n._id} href={n.link || "#"}>
+                            <li className="p-3 border-b border-slate-600 hover:bg-slate-600/50 cursor-pointer">
+                              <p className="text-sm">{n.message}</p>
+                              <p className="text-xs text-slate-400 mt-1">
+                                {formatDistanceToNow(parseISO(n.createdAt), {
+                                  addSuffix: true,
+                                })}
+                              </p>
+                            </li>
+                          </Link>
+                        ))
+                      ) : (
+                        <li className="p-4 text-center text-sm text-slate-400">
+                          You&apos;re all caught up!
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={handleLogout}
                 className="cursor-pointer flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white transition-all duration-200 backdrop-blur-sm"
@@ -320,7 +431,7 @@ export default function AdminDashboardPage() {
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-slate-300 text-sm">Total Appointments</p>
+                  <p className="text-slate-300 text-sm">Total</p>
                   <p className="text-2xl font-bold text-white">{stats.total}</p>
                 </div>
                 <div className="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center">
@@ -382,7 +493,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Error Display for Appointments */}
+          {/* Error Display */}
           {error && (
             <div className="bg-red-500/20 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl mb-6 backdrop-blur-sm">
               <div className="flex items-center">
@@ -391,7 +502,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* Upcoming Appointments Section */}
+          {/* Upcoming Appointments */}
           {(todayAppointments.length > 0 ||
             tomorrowAppointments.length > 0 ||
             thisWeekAppointments.length > 0) && (
@@ -399,7 +510,6 @@ export default function AdminDashboardPage() {
               <h2 className="text-xl font-bold text-white mb-4">
                 Upcoming Appointments (This Week)
               </h2>
-
               {todayAppointments.length > 0 && (
                 <>
                   <h3 className="text-lg font-semibold text-slate-300 mb-2">
@@ -429,16 +539,14 @@ export default function AdminDashboardPage() {
                         </div>
                         <div className="flex items-center space-x-2">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(
-                              app.status
-                            )}`}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(app.status)}`}
                           >
                             {getStatusIcon(app.status)} {app.status}
                           </span>
                           <button
                             onClick={() => handleDelete(app._id)}
-                            className="p-1 rounded-md transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
-                            aria-label="Delete appointment"
+                            className="p-1 rounded-md transition-all duration-200 text-red-300 hover:bg-red-500/10 hover:text-red-500"
+                            aria-label="Delete"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -448,7 +556,6 @@ export default function AdminDashboardPage() {
                   </ul>
                 </>
               )}
-
               {tomorrowAppointments.length > 0 && (
                 <>
                   <h3 className="text-lg font-semibold text-slate-300 mb-2">
@@ -475,16 +582,14 @@ export default function AdminDashboardPage() {
                         </div>
                         <div className="flex items-center space-x-2">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(
-                              app.status
-                            )}`}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(app.status)}`}
                           >
                             {getStatusIcon(app.status)} {app.status}
                           </span>
                           <button
                             onClick={() => handleDelete(app._id)}
-                            className="p-1 rounded-md transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
-                            aria-label="Delete appointment"
+                            className="p-1 rounded-md transition-all duration-200 text-red-300 hover:bg-red-500/10 hover:text-red-500"
+                            aria-label="Delete"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -494,18 +599,16 @@ export default function AdminDashboardPage() {
                   </ul>
                 </>
               )}
-
-              {/* Render other days of the week if they have appointments */}
-              {orderedDays.map(day => {
-                const appointmentsForDay = groupedThisWeek[day];
-                if (appointmentsForDay && appointmentsForDay.length > 0) {
+              {orderedDays.map((day) => {
+                const dayApps = groupedThisWeek[day];
+                if (dayApps && dayApps.length > 0) {
                   return (
                     <React.Fragment key={day}>
                       <h3 className="text-lg font-semibold text-slate-300 mb-2">
                         {day}
                       </h3>
                       <ul className="space-y-3 mb-4">
-                        {appointmentsForDay.map((app) => (
+                        {dayApps.map((app) => (
                           <li
                             key={app._id}
                             className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/15 text-slate-200"
@@ -522,22 +625,17 @@ export default function AdminDashboardPage() {
                                   {app.appointmentTime}
                                 </p>
                               </div>
-                              <div className="text-xs italic text-slate-300">
-                                {app.reason || ""}
-                              </div>
                             </div>
                             <div className="flex items-center space-x-2">
                               <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(
-                                  app.status
-                                )}`}
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusClasses(app.status)}`}
                               >
                                 {getStatusIcon(app.status)} {app.status}
                               </span>
                               <button
                                 onClick={() => handleDelete(app._id)}
-                                className="p-1 rounded-md transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
-                                aria-label="Delete appointment"
+                                className="p-1 rounded-md transition-all duration-200 text-red-300 hover:bg-red-500/10 hover:text-red-500"
+                                aria-label="Delete"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -548,17 +646,8 @@ export default function AdminDashboardPage() {
                     </React.Fragment>
                   );
                 }
-                return null; // Don't render anything if no appointments for this day
+                return null;
               })}
-
-              {/* Message if no upcoming appointments found */}
-              {todayAppointments.length === 0 &&
-               tomorrowAppointments.length === 0 &&
-               thisWeekAppointments.length === 0 && (
-                <p className="text-center text-slate-400 py-4">
-                  No upcoming appointments this week.
-                </p>
-              )}
             </div>
           )}
 
@@ -574,10 +663,10 @@ export default function AdminDashboardPage() {
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="appearance-none py-2 pl-4 pr-8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm bg-white/10 border border-white/20 text-white"
+                    className="appearance-none py-2 pl-4 pr-8 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/10 border border-white/20 text-white"
                   >
                     <option value="all" className="bg-gray-800 text-white">
-                      All Appointments
+                      All
                     </option>
                     <option value="pending" className="bg-gray-800 text-white">
                       Pending
@@ -613,13 +702,9 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               <button
-                onClick={fetchAppointments}
+                onClick={() => fetchAppointments()}
                 disabled={loading}
-                className={`flex items-center px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  loading
-                    ? "bg-slate-600 cursor-not-allowed"
-                    : "bg-gradient-to-r from-white/10 to-primary hover:scale-105 transition-all duration-300"
-                } text-white`}
+                className={`flex items-center px-6 py-2 rounded-xl font-medium transition-all duration-200 ${loading ? "bg-slate-600 cursor-not-allowed" : "bg-gradient-to-r from-white/10 to-primary hover:scale-105"} text-white`}
               >
                 <RefreshCw
                   className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -627,20 +712,20 @@ export default function AdminDashboardPage() {
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
-
-            {/* Appointments Table */}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-white/20">
                 <thead className="bg-white/5">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                       <div className="flex items-center">
-                        <User className="w-4 h-4 mr-2" /> Patient
+                        <User className="w-4 h-4 mr-2" />
+                        Patient
                       </div>
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                       <div className="flex items-center">
-                        <CalendarIcon className="w-4 h-4 mr-2" /> Date & Time
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        Date & Time
                       </div>
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
@@ -658,7 +743,7 @@ export default function AdminDashboardPage() {
                   {loading && appointments.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={5}
                         className="text-center px-6 py-12 text-slate-300"
                       >
                         <div className="flex flex-col items-center">
@@ -670,12 +755,12 @@ export default function AdminDashboardPage() {
                   ) : filteredAppointments.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={5}
                         className="text-center px-6 py-12 text-slate-300"
                       >
                         <div className="flex flex-col items-center">
                           <CalendarIcon className="w-8 h-8 mb-4 opacity-50" />
-                          <p>No appointments found</p>
+                          <p>No appointments found.</p>
                         </div>
                       </td>
                     </tr>
@@ -700,18 +785,16 @@ export default function AdminDashboardPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-slate-300 italic max-w-xs truncate">
-                            {app.reason || "No reason provided"}
+                            {app.reason || "N/A"}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${getStatusClasses(
-                              app.status
-                            )}`}
+                            className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium border ${getStatusClasses(app.status)}`}
                           >
                             <span className="mr-1">
                               {getStatusIcon(app.status)}
-                            </span>{" "}
+                            </span>
                             {app.status}
                           </span>
                         </td>
@@ -726,29 +809,26 @@ export default function AdminDashboardPage() {
                                   )
                                 }
                                 value={app.status}
-                                className="appearance-none py-1.5 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm bg-white/10 border border-white/20 text-white"
+                                className="appearance-none py-1.5 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white/10 border border-white/20 text-white"
                               >
-                                <option
-                                  value="pending"
-                                  className="bg-gray-800 text-white"
-                                >
+                                <option value="pending" className="bg-gray-800">
                                   🕐 Pending
                                 </option>
                                 <option
                                   value="confirmed"
-                                  className="bg-gray-800 text-white"
+                                  className="bg-gray-800"
                                 >
                                   ✅ Confirmed
                                 </option>
                                 <option
                                   value="completed"
-                                  className="bg-gray-800 text-white"
+                                  className="bg-gray-800"
                                 >
                                   🎉 Completed
                                 </option>
                                 <option
                                   value="cancelled"
-                                  className="bg-gray-800 text-white"
+                                  className="bg-gray-800"
                                 >
                                   ❌ Cancelled
                                 </option>
@@ -756,7 +836,6 @@ export default function AdminDashboardPage() {
                               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-white/70">
                                 <svg
                                   className="w-4 h-4 fill-current"
-                                  xmlns="http://www.w3.org/2000/svg"
                                   viewBox="0 0 20 20"
                                 >
                                   <path d="M9.293 12.95l.707.707L15.646 7.354l-.707-.707L10 11.586 5.354 7.047l-.707.707L9.293 12.95z" />
@@ -765,11 +844,8 @@ export default function AdminDashboardPage() {
                             </div>
                             <button
                               onClick={() => handleDelete(app._id)}
-                              className="p-2 rounded-lg transition-all duration-200 text-red-300 cursor-pointer hover:bg-red-500/10 hover:text-red-500"
-                              aria-label="Delete appointment"
-                              style={{
-                                backgroundColor: "rgba(239, 68, 68, 0.15)",
-                              }}
+                              className="p-2 rounded-lg transition-all duration-200 text-red-300 hover:bg-red-500/20 hover:text-red-500"
+                              aria-label="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -782,11 +858,9 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           </div>
-
-          {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-sm text-slate-200">
-              Admin Dashboard - Manage appointments and clinic operations
+              Admin Dashboard - Manage clinic operations
             </p>
           </div>
         </div>

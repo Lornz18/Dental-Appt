@@ -244,7 +244,7 @@ export default function Appointment() {
   // State for the form inputs
   const [form, setForm] = useState({
     patientName: "",
-    email: "",
+    patientEmail: "",
     appointmentDate: "",
     appointmentTime: "", // Stores time in HH:MM format
     service: "", // Stores the NAME of the selected service
@@ -559,7 +559,7 @@ export default function Appointment() {
     // Basic validation: ensure all required fields are filled
     if (
       !form.patientName ||
-      !form.email ||
+      !form.patientEmail ||
       !form.appointmentDate ||
       !form.appointmentTime ||
       !form.service ||
@@ -576,7 +576,7 @@ export default function Appointment() {
       // Prepare the data to be sent
       const appointmentData = {
         patientName: form.patientName,
-        email: form.email,
+        patientEmail: form.patientEmail,
         appointmentDate: form.appointmentDate,
         appointmentTime: form.appointmentTime, // Still stores HH:MM internally for backend
         reason: form.service, // Use the selected service's NAME as the reason
@@ -600,7 +600,7 @@ export default function Appointment() {
       // Reset the form and clear selections
       setForm({
         patientName: "",
-        email: "",
+        patientEmail: "",
         appointmentDate: "",
         appointmentTime: "",
         service: "",
@@ -861,8 +861,8 @@ export default function Appointment() {
                   </label>
                   <input
                     type="email"
-                    id="email"
-                    value={form.email}
+                    id="patientEmail"
+                    value={form.patientEmail}
                     onChange={handleInputChange}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     placeholder="you@example.com"
@@ -962,7 +962,7 @@ export default function Appointment() {
                   disabled={
                     loading ||
                     !form.patientName ||
-                    !form.email ||
+                    !form.patientEmail ||
                     !form.appointmentDate ||
                     !form.appointmentTime ||
                     !form.service ||
