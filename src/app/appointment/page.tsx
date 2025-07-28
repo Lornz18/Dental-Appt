@@ -620,11 +620,11 @@ export default function Appointment() {
     `;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans dark:bg-gray-900">
       <style>{calendarStyles}</style>
       <div className="container">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden p-6 sm:p-8">
-          <h2 className="text-3xl font-extrabold text-center mb-8 text-gray-900">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl dark:shadow-primary/50 shadow-lg overflow-hidden p-6 sm:p-8 dark:bg-gray-900">
+          <h2 className="text-3xl font-extrabold text-center mb-8 text-gray-900 dark:text-white">
             Book Your Appointment
           </h2>
 
@@ -649,7 +649,7 @@ export default function Appointment() {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               <div className="flex flex-col items-center">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Select a Date</h3>
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-300 mb-4">Select a Date</h3>
                 <Calendar
                   value={selectedDate}
                   onChange={(value) => {
@@ -668,9 +668,9 @@ export default function Appointment() {
                   className="custom-react-calendar"
                 />
                 {selectedDate && (
-                  <p className="mt-4 text-sm text-center text-gray-600">
+                  <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">
                     Selected:{" "}
-                    <span className="font-medium text-gray-800">
+                    <span className="font-medium text-gray-800 dark:text-gray-200">
                       {format(selectedDate, "EEEE, MMMM do, yyyy")}
                     </span>
                   </p>
@@ -708,7 +708,7 @@ export default function Appointment() {
                     id="service"
                     value={form.service}
                     onChange={handleServiceChange}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:bg-gray-800 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
                     required
                   >
                     <option value="" disabled hidden>-- Please select a service --</option>
