@@ -19,29 +19,51 @@ async function connectToDB() {
  * This is a "fire-and-forget" operation from the perspective of the API route.
  * @param message - The JavaScript object to send as the notification.
  */
-async function notifyWebSocketServer(message: object) {
-  if (!WS_URL) {
-    console.error("WebSocket URL is not configured.");
-    return;
-  }
-  const ws = new WebSocket(WS_URL);
+// --- A more robust WebSocket Notifier that works in serverless environments ---
+function notifyWebSocketServer(message: object): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsUrl) {
+      console.error("WebSocket URL is not configured.");
+      return reject(new Error("WebSocket URL is not configured."));
+    }
 
-  ws.on("open", () => {
-    console.log(
-      "API route connected to WebSocket server to send notification."
-    );
-    ws.send(JSON.stringify(message));
-    ws.close(); // Close the connection after sending
-  });
+    console.log(`Attempting to connect to WebSocket server at: ${wsUrl}`);
+    const ws = new WebSocket(wsUrl);
 
-  ws.on("error", (error) => {
-    // Log the error but don't let it fail the HTTP request.
-    // The main operation (saving to DB) was successful.
-    console.error("WebSocket notification error:", error);
-  });
+    // Set a timeout to prevent the API route from hanging forever
+    const connectionTimeout = setTimeout(() => {
+      ws.terminate(); // Forcefully close the connection
+      console.error("WebSocket connection timed out.");
+      reject(new Error("WebSocket connection timed out after 8 seconds."));
+    }, 8000); // 8-second timeout is reasonable for a serverless function
 
-  ws.on("close", () => {
-    console.log("API route disconnected from WebSocket server.");
+    ws.on("open", () => {
+      clearTimeout(connectionTimeout); // Connection was successful, clear the timeout
+      console.log("SUCCESS: API route connected to WebSocket server.");
+      
+      ws.send(JSON.stringify(message), (err) => {
+        if (err) {
+          console.error("Error sending WebSocket message:", err);
+          reject(err); // Reject the promise if sending fails
+        } else {
+          console.log("Message sent successfully over WebSocket.");
+          resolve(); // Resolve the promise after the message is sent
+        }
+        ws.close(); // Close the connection
+      });
+    });
+
+    ws.on("error", (error) => {
+      clearTimeout(connectionTimeout);
+      console.error("WebSocket connection error:", error.message);
+      reject(error); // Reject the promise on any connection error
+    });
+
+    ws.on("close", () => {
+      clearTimeout(connectionTimeout);
+      console.log("API route disconnected from WebSocket server.");
+    });
   });
 }
 
