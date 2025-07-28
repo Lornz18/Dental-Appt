@@ -370,7 +370,6 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        
       </section>
 
       {/* Testimonials Section */}
