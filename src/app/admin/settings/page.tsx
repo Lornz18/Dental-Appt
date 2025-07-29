@@ -1010,7 +1010,7 @@ export default function AdminSettingPage() {
                     {service.durationMinutes}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-green-400 font-medium">
-                    ${service.price.toFixed(2)}
+                    ₱{service.price.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center space-x-2">
                     <button
@@ -1193,7 +1193,7 @@ export default function AdminSettingPage() {
                       htmlFor="servicePrice"
                       className="block text-sm font-medium text-slate-300 mb-1"
                     >
-                      Price ($)
+                      Price (₱)
                     </label>
                     <input
                       type="number"

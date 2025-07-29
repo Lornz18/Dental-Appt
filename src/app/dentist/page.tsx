@@ -74,11 +74,11 @@ export default function DentistTeamPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-primary py-24 px-4">
         <div className="absolute inset-0 bg-primary opacity-90"></div>
-        <div className="relative max-w-6xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-background mb-6 tracking-tight">
+        <div className="relative max-w-6xl mx-auto text-center ">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
             Meet Our Team
           </h1>
-          <p className="text-xl md:text-2xl text-background/90 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
             Exceptional dental professionals dedicated to your perfect smile
           </p>
         </div>
@@ -185,7 +185,7 @@ export default function DentistTeamPage() {
             Schedule a consultation with any of our specialists and discover personalized care tailored to your unique needs.
           </p>
           <Link
-            href="/book-appointment"
+            href="/appointment"
             className="inline-flex items-center px-10 py-4 bg-background text-secondary font-bold rounded-full hover:bg-background/90 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
           >
             Book Your Consultation

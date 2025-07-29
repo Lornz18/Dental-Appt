@@ -1,6 +1,7 @@
 // pages/index.js
 
 "use client";
+
 import { Clipboard, HomeIcon, MessageSquare, Search, } from "lucide-react";
 import { useEffect, useState } from 'react'; // Import useState
 import Image from "next/image";

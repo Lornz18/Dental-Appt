@@ -10,7 +10,7 @@ import React, { useState, useEffect } from "react";
 // Or if you have a lib folder:
 // import { IService } from '@/lib/models/Service';
 import { IService } from "@/app/models/services-model"; // <-- Adjust this path as needed
-import { Clock, DollarSign, Heart, Shield, Sparkles, Star } from "lucide-react";
+import { Clock, Heart, Shield, Sparkles, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // Define a type for the API response to ensure type safety
@@ -203,11 +203,10 @@ const ServicesPage: React.FC = () => {
 
                       <div className="flex items-center justify-between py-2 px-3 bg-primary/5 rounded-lg">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <DollarSign className="w-4 h-4 text-primary" />
                           Price
                         </div>
                         <span className="text-lg font-bold text-primary">
-                          ${service.price.toFixed(2)}
+                          ₱{service.price.toFixed(2)}
                         </span>
                       </div>
                     </div>

@@ -5,66 +5,11 @@ import mongoose from "mongoose";
 import WebSocket from "isomorphic-ws"; // Import the 'ws' library to act as a client
 
 const MONGODB_URI = process.env.MONGODB_URI || "your-mongodb-connection-string";
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
 
 async function connectToDB() {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(MONGODB_URI);
   }
-}
-
-// --- WebSocket Notifier Helper Function ---
-/**
- * Connects to the WebSocket server as a client, sends a message, and disconnects.
- * This is a "fire-and-forget" operation from the perspective of the API route.
- * @param message - The JavaScript object to send as the notification.
- */
-// --- A more robust WebSocket Notifier that works in serverless environments ---
-function notifyWebSocketServer(message: object): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-    if (!wsUrl) {
-      console.error("WebSocket URL is not configured.");
-      return reject(new Error("WebSocket URL is not configured."));
-    }
-
-    console.log(`Attempting to connect to WebSocket server at: ${wsUrl}`);
-    const ws = new WebSocket(wsUrl);
-
-    // Set a timeout to prevent the API route from hanging forever
-    const connectionTimeout = setTimeout(() => {
-      ws.terminate(); // Forcefully close the connection
-      console.error("WebSocket connection timed out.");
-      reject(new Error("WebSocket connection timed out after 8 seconds."));
-    }, 8000); // 8-second timeout is reasonable for a serverless function
-
-    ws.on("open", () => {
-      clearTimeout(connectionTimeout); // Connection was successful, clear the timeout
-      console.log("SUCCESS: API route connected to WebSocket server.");
-      
-      ws.send(JSON.stringify(message), (err) => {
-        if (err) {
-          console.error("Error sending WebSocket message:", err);
-          reject(err); // Reject the promise if sending fails
-        } else {
-          console.log("Message sent successfully over WebSocket.");
-          resolve(); // Resolve the promise after the message is sent
-        }
-        ws.close(); // Close the connection
-      });
-    });
-
-    ws.on("error", (error) => {
-      clearTimeout(connectionTimeout);
-      console.error("WebSocket connection error:", error.message);
-      reject(error); // Reject the promise on any connection error
-    });
-
-    ws.on("close", () => {
-      clearTimeout(connectionTimeout);
-      console.log("API route disconnected from WebSocket server.");
-    });
-  });
 }
 
 // POST: Create a new appointment
@@ -117,15 +62,15 @@ export async function POST(request: Request) {
     // --- 3. Send a real-time signal via WebSocket ---
     // The signal is now more generic, telling clients "there's a new alert".
     // The client should then fetch from a new `/api/alerts` endpoint.
-    console.log("Sending notification signal to WebSocket server...");
+    /* console.log("Sending notification signal to WebSocket server...");
     await notifyWebSocketServer({
       type: "new-alert", // Use a generic signal
       payload: {
         message: `New pending appointment from ${savedAppointment.patientName}.`,
       },
-    });
+    }); */
 
-    return NextResponse.json({ success: true, id: savedAppointment._id });
+    return NextResponse.json({ success: true, id: savedAppointment._id, patientName: savedAppointment.patientName });
   } catch (error) {
     console.error("Error creating appointment:", error); // Log the full error
 
