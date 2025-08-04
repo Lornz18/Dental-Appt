@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 import AppointmentConfirmationEmail from "@/components/emails/AppointmentConfirmationEmail";
 import { Resend } from "resend";
 import React from "react";
-import WebSocket from "ws"; // Import the 'ws' library to act as a client
 import Alert from "@/app/models/alert-model";
 
 const MONGODB_URI = process.env.MONGODB_URI || "your-mongodb-connection-string";
@@ -20,39 +19,7 @@ async function connectToDB() {
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL;
 
-// --- WebSocket Notifier Helper Function ---
-/**
- * Connects to the WebSocket server as a client, sends a message, and disconnects.
- * This is a "fire-and-forget" operation from the perspective of the API route.
- * @param message - The JavaScript object to send as the notification.
- */
-function notifyWebSocketServer(message: object): void {
-  if (!WS_URL) {
-    console.error("WebSocket URL is not configured.");
-    return;
-  }
-  const ws = new WebSocket(WS_URL);
-
-  ws.on("open", () => {
-    console.log(
-      "API route connected to WebSocket server to send notification."
-    );
-    ws.send(JSON.stringify(message));
-    ws.close(); // Close the connection after sending
-  });
-
-  ws.on("error", (error) => {
-    // Log the error but don't let it fail the HTTP request.
-    // The main operation (saving to DB) was successful.
-    console.error("WebSocket notification error:", error);
-  });
-
-  ws.on("close", () => {
-    console.log("API route disconnected from WebSocket server.");
-  });
-}
 // ✅ GET appointment by ID
 export async function GET(request: NextRequest, { params }: Params) {
   try {
@@ -154,18 +121,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     if (newStatus === "cancelled" && originalStatus !== "cancelled") {
       console.log("Creating persistent alert in the database...");
-          await Alert.create({
-            message: `Appointment Cancellation from ${updatedAppointment.patientName}.`,
-            type: "cancellation",
-            link: `/appointment/${updatedAppointment._id}`, // Optional: link to the relevant item
-          });
-          console.log("Alert saved successfully.");
-      notifyWebSocketServer({
-        type: "new-alert", // Use a generic signal
-        payload: {
-          message: `Appointment with ID ${id} has been cancelled.`,
-        },
+      await Alert.create({
+        message: `Appointment Cancellation from ${updatedAppointment.patientName}.`,
+        type: "cancellation",
+        link: `/appointment/${updatedAppointment._id}`, // Optional: link to the relevant item
       });
+      console.log("Alert saved successfully.");
     }
 
     return NextResponse.json({

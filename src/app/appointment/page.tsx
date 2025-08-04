@@ -17,6 +17,7 @@ import {
   parse,
 } from "date-fns";
 import toast from "react-hot-toast"; // Assuming you're using react-hot-toast for notifications
+import { WebSocketService } from "@/services/websocket.service";
 
 // --- Types ---
 
@@ -504,48 +505,6 @@ export default function Appointment() {
     }
   };
 
-  function notifyWebSocketServer(message: object): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
-      if (!wsUrl) {
-        console.error("WebSocket URL is not configured.");
-        // Resolve instead of rejecting so a missing WS config doesn't break the booking flow.
-        return resolve();
-      }
-
-      console.log(`Attempting to connect to WebSocket server at: ${wsUrl}`);
-      const ws = new WebSocket(wsUrl);
-
-      const connectionTimeout = setTimeout(() => {
-        if (ws.readyState !== WebSocket.OPEN) {
-          ws.close();
-          console.error("WebSocket connection timed out.");
-          reject(new Error("WebSocket connection timed out after 8 seconds."));
-        }
-      }, 8000);
-
-      ws.onopen = () => {
-        clearTimeout(connectionTimeout);
-        console.log("SUCCESS: Client connected to WebSocket server.");
-        ws.send(JSON.stringify(message));
-        console.log("Message sent successfully over WebSocket.");
-        ws.close();
-        resolve();
-      };
-
-      ws.onerror = (error) => {
-        clearTimeout(connectionTimeout);
-        console.error("WebSocket connection error:", error);
-        reject(new Error("WebSocket connection failed."));
-      };
-
-      ws.onclose = () => {
-        clearTimeout(connectionTimeout);
-        console.log("Client disconnected from WebSocket server.");
-      };
-    });
-  }
-
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -598,12 +557,18 @@ export default function Appointment() {
 
       try {
         if (response) {
-          await notifyWebSocketServer({
+          WebSocketService.notify({
             type: "new-alert", // Use a generic signal
             payload: {
               message: `New Pending Appointment has been sent.`,
             },
-          });
+          })
+            .then(() => {
+              console.log("WebSocket notification sent.");
+            })
+            .catch((error: Error) => {
+              console.error("WebSocket error:", error.message);
+            });
         }
       } catch (wsError) {
         console.error("WebSocket notification failed:", wsError);

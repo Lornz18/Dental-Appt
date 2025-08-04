@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { WebSocketService } from "@/services/websocket.service";
 
 interface Appointment {
   _id: string;
@@ -29,7 +30,8 @@ export default function AppointmentPage() {
       try {
         const res = await fetch(`/api/appointment/${id}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to fetch appointment");
+        if (!res.ok)
+          throw new Error(data.error || "Failed to fetch appointment");
         setAppointment(data.appointment);
       } catch (err) {
         setError((err as Error).message);
@@ -44,7 +46,9 @@ export default function AppointmentPage() {
   const handleCancel = async () => {
     if (!appointment) return;
 
-    const confirm = window.confirm("Are you sure you want to cancel this appointment?");
+    const confirm = window.confirm(
+      "Are you sure you want to cancel this appointment?"
+    );
     if (!confirm) return;
 
     setCancelling(true);
@@ -61,6 +65,19 @@ export default function AppointmentPage() {
       if (!res.ok) throw new Error(data.error || "Cancellation failed");
 
       setAppointment(data.appointment);
+
+      WebSocketService.notify({
+        type: "new-alert", // Use a generic signal
+        payload: {
+          message: `Appointment with ID ${id} has been cancelled.`,
+        },
+      })
+        .then(() => {
+          console.log("WebSocket notification sent.");
+        })
+        .catch((error: Error) => {
+          console.error("WebSocket error:", error.message);
+        });
       alert("Appointment has been cancelled.");
     } catch (err) {
       alert(`Error: ${(err as Error).message}`);
@@ -120,7 +137,9 @@ export default function AppointmentPage() {
         <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg dark:shadow-gray-900/50">
           <div className="flex items-center space-x-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
-            <p className="text-gray-600 dark:text-gray-300 font-medium">Loading appointment details...</p>
+            <p className="text-gray-600 dark:text-gray-300 font-medium">
+              Loading appointment details...
+            </p>
           </div>
         </div>
       </div>
@@ -132,8 +151,12 @@ export default function AppointmentPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg dark:shadow-gray-900/50 max-w-md w-full mx-4">
           <div className="text-center">
-            <div className="text-red-500 dark:text-red-400 text-6xl mb-4">⚠️</div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Error Loading Appointment</h2>
+            <div className="text-red-500 dark:text-red-400 text-6xl mb-4">
+              ⚠️
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Error Loading Appointment
+            </h2>
             <p className="text-red-600 dark:text-red-400 mb-6">{error}</p>
             <button
               onClick={() => router.back()}
@@ -152,9 +175,16 @@ export default function AppointmentPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg dark:shadow-gray-900/50 max-w-md w-full mx-4">
           <div className="text-center">
-            <div className="text-gray-400 dark:text-gray-500 text-6xl mb-4">🔍</div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Appointment Not Found</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">The appointment you&apos;re looking for doesn&apos;t exist or has been removed.</p>
+            <div className="text-gray-400 dark:text-gray-500 text-6xl mb-4">
+              🔍
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Appointment Not Found
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              The appointment you&apos;re looking for doesn&apos;t exist or has
+              been removed.
+            </p>
             <button
               onClick={() => router.back()}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg transition-colors duration-200"
@@ -170,18 +200,26 @@ export default function AppointmentPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 transition-colors duration-200">
       <div className="max-w-2xl mx-auto px-4">
-
         {/* Main Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-gray-900/50 overflow-hidden transition-colors duration-200">
           {/* Status Banner */}
-          <div className={`px-6 py-4 border-l-4 ${getStatusBannerColor(appointment.status)}`}>
+          <div
+            className={`px-6 py-4 border-l-4 ${getStatusBannerColor(appointment.status)}`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">{getStatusIcon(appointment.status)}</span>
+                <span className="text-2xl">
+                  {getStatusIcon(appointment.status)}
+                </span>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Appointment Status</h3>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(appointment.status)}`}>
-                    {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Appointment Status
+                  </h3>
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(appointment.status)}`}
+                  >
+                    {appointment.status.charAt(0).toUpperCase() +
+                      appointment.status.slice(1)}
                   </span>
                 </div>
               </div>
@@ -198,17 +236,29 @@ export default function AppointmentPage() {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-start space-x-3">
-                    <div className="text-blue-500 dark:text-blue-400 mt-1">👤</div>
+                    <div className="text-blue-500 dark:text-blue-400 mt-1">
+                      👤
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Patient Name</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{appointment.patientName}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Patient Name
+                      </p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {appointment.patientName}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <div className="text-blue-500 dark:text-blue-400 mt-1">📧</div>
+                    <div className="text-blue-500 dark:text-blue-400 mt-1">
+                      📧
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Email Address</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100 break-all">{appointment.patientEmail}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Email Address
+                      </p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100 break-all">
+                        {appointment.patientEmail}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -221,31 +271,49 @@ export default function AppointmentPage() {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-start space-x-3">
-                    <div className="text-blue-500 dark:text-blue-400 mt-1">📅</div>
+                    <div className="text-blue-500 dark:text-blue-400 mt-1">
+                      📅
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Date</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Date
+                      </p>
                       <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {new Date(appointment.appointmentDate).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
+                        {new Date(
+                          appointment.appointmentDate
+                        ).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
                         })}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <div className="text-blue-500 dark:text-blue-400 mt-1">🕒</div>
+                    <div className="text-blue-500 dark:text-blue-400 mt-1">
+                      🕒
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Time</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{appointment.appointmentTime}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Time
+                      </p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {appointment.appointmentTime}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <div className="text-blue-500 dark:text-blue-400 mt-1">⏱️</div>
+                    <div className="text-blue-500 dark:text-blue-400 mt-1">
+                      ⏱️
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Duration</p>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{appointment.durationMinutes} minutes</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Duration
+                      </p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                        {appointment.durationMinutes} minutes
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -254,37 +322,42 @@ export default function AppointmentPage() {
 
             {/* Reason Section */}
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Reason for Visit</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                Reason for Visit
+              </h3>
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 transition-colors duration-200">
-                <p className="text-gray-700 dark:text-gray-300">{appointment.reason}</p>
+                <p className="text-gray-700 dark:text-gray-300">
+                  {appointment.reason}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          {appointment.status !== "cancelled" && appointment.status !== "completed" && (
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 transition-colors duration-200">
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={handleCancel}
-                  disabled={cancelling}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 dark:bg-red-500 dark:hover:bg-red-600 dark:disabled:bg-red-400 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 disabled:cursor-not-allowed"
-                >
-                  {cancelling ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Cancelling...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>❌</span>
-                      <span>Cancel Appointment</span>
-                    </>
-                  )}
-                </button>
+          {appointment.status !== "cancelled" &&
+            appointment.status !== "completed" && (
+              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 dark:bg-red-500 dark:hover:bg-red-600 dark:disabled:bg-red-400 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 disabled:cursor-not-allowed"
+                  >
+                    {cancelling ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Cancelling...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>❌</span>
+                        <span>Cancel Appointment</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
     </div>
